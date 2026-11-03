@@ -69,10 +69,11 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     DOSSIER_DATA_DIR=/data
 # Chromium for PDFs with its system libraries and fonts, matching the app's
-# playwright-core, as in the dev image. Its CLI is only mounted for this.
-RUN --mount=type=bind,from=deps,source=/app/node_modules/playwright-core,target=/tmp/playwright-core \
-  node /tmp/playwright-core/cli.js install --with-deps --only-shell chromium \
-  && rm -rf /var/lib/apt/lists/*
+# playwright-core, as in the dev image. Its CLI is only copied in for this: a
+# plain COPY, as Railway's builder is reported to reject bind mounts.
+COPY --from=deps /app/node_modules/playwright-core /tmp/playwright-core
+RUN node /tmp/playwright-core/cli.js install --with-deps --only-shell chromium \
+  && rm -rf /var/lib/apt/lists/* /tmp/playwright-core
 COPY --from=build /tools ./tools
 # On the PATH, so `docker run --rm -it ghcr.io/aientech/dossier hash-password` works.
 RUN ln -s /app/tools/hash-password.mjs /usr/local/bin/hash-password

@@ -42,6 +42,8 @@ function browser(): Promise<Browser> {
       .launch({
         // Docker gives /dev/shm only 64 MB.
         args: ["--disable-dev-shm-usage"],
+        // Outside the image, a Chromium already on the machine can be used instead.
+        executablePath: process.env.CAREER_STUDIO_CHROMIUM_PATH || undefined,
       })
       .then((launched) => {
         // A crashed or closed browser is replaced on the next render.

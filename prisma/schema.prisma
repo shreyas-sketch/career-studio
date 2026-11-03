@@ -279,25 +279,27 @@ enum Density {
 /// ("editorial") and are read-only: the app never edits them, the seed keeps
 /// them in sync, and a trigger stops them from being deleted.
 model Theme {
-  id            String        @id @default(cuid())
-  builtIn       Boolean       @default(false)
-  name          String
-  headFont      ThemeFont
-  bodyFont      ThemeFont
+  id             String          @id @default(cuid())
+  builtIn        Boolean         @default(false)
+  name           String
+  headFont       ThemeFont
+  bodyFont       ThemeFont
   /// "#rrggbb"
-  accent        String
-  layout        ThemeLayout   @default(SINGLE)
-  align         ThemeAlign    @default(LEFT)
-  headingStyle  HeadingStyle  @default(PLAIN)
-  density       Density       @default(REGULAR)
-  headerStyle   HeaderStyle   @default(PLAIN)
-  sidebarStyle  SidebarStyle  @default(PLAIN)
-  dateStyle     DateStyle     @default(INLINE)
-  photoShape    PhotoShape    @default(CIRCLE)
-  photoPosition PhotoPosition @default(HEADER_END)
-  documents     Document[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  accent         String
+  layout         ThemeLayout     @default(SINGLE)
+  align          ThemeAlign      @default(LEFT)
+  headingStyle   HeadingStyle    @default(PLAIN)
+  density        Density         @default(REGULAR)
+  headerStyle    HeaderStyle     @default(PLAIN)
+  sidebarStyle   SidebarStyle    @default(PLAIN)
+  dateStyle      DateStyle       @default(INLINE)
+  photoShape     PhotoShape      @default(CIRCLE)
+  photoPosition  PhotoPosition   @default(HEADER_END)
+  documents      Document[]
+  /// Career Studio: resume versions using this theme.
+  resumeVersions ResumeVersion[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
 
 enum AiProvider {
@@ -392,24 +394,24 @@ enum FunnelStage {
 }
 
 model Application {
-  id                  String            @id @default(cuid())
+  id                  String             @id @default(cuid())
   /// Whether the user made it, or the job agent prepared it (E16).
-  origin              ApplicationOrigin @default(MANUAL)
+  origin              ApplicationOrigin  @default(MANUAL)
   /// The agent's score for the posting, when the agent prepared it.
   agentScore          Int?
   /// An agent draft not approved yet: only the Agent screen shows it (#195).
-  awaitingReview      Boolean           @default(false)
-  title               String            @default("")
-  company             String            @default("")
-  role                String            @default("")
-  location            String            @default("")
+  awaitingReview      Boolean            @default(false)
+  title               String             @default("")
+  company             String             @default("")
+  role                String             @default("")
+  location            String             @default("")
   /// Work mode as written in the posting, e.g. "Hybrid · 3 days in office".
-  mode                String            @default("")
-  salary              String            @default("")
-  deadline            DateTime?         @db.Date
+  mode                String             @default("")
+  salary              String             @default("")
+  deadline            DateTime?          @db.Date
   /// Saved, not fetched (NEW-1).
-  postingUrl          String            @default("")
-  postingText         String            @default("")
+  postingUrl          String             @default("")
+  postingText         String             @default("")
   /// What the AI read from the posting (extractedSchema).
   extracted           Json?
   /// The prompt version that wrote `extracted`, e.g. "extract-posting@1" (E6-5).
@@ -418,18 +420,18 @@ model Application {
   match               Json?
   /// The prompt version that wrote `match`.
   matchedWith         String?
-  status              ApplicationStatus @default(DRAFT)
+  status              ApplicationStatus  @default(DRAFT)
   /// The furthest stage ever reached; null while never sent. Only the status module changes it.
   furthestStage       FunnelStage?
   sentAt              DateTime?
   /// When the next interview is, while the application is in Interview (E9-9); shown on the dashboard.
   nextInterviewAt     DateTime?
-  tone                Tone              @default(WARM)
+  tone                Tone               @default(WARM)
   /// The language the documents were written in, e.g. "English".
-  language            String            @default("")
+  language            String             @default("")
   /// The tailored resume follows its theme's layout, sidebar included; off
   /// means a single column (APP-4, decided in E5-1 #42).
-  followThemeLayout   Boolean           @default(false)
+  followThemeLayout   Boolean            @default(false)
   /// Whether the tailored resume shows the profile photo; null follows the
   /// profile's "Show on resumes" (#224).
   showPhoto           Boolean?
@@ -456,8 +458,13 @@ model Application {
   facts               Fact[]
   /// Its background jobs, deleted with it (their inputs and results hold the posting and the documents).
   jobs                Job[]
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  /// Career Studio: practice sessions, the interview loop and skill plans made for it.
+  interviewSessions   InterviewSession[]
+  interviewLoop       InterviewLoop?
+  skillPlans          SkillPlan[]
+  resumeVersions      ResumeVersion[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   @@index([status])
   @@index([updatedAt])
@@ -934,4 +941,303 @@ model Job {
   @@index([key, createdAt])
   @@index([status])
   @@index([applicationId])
+}
+
+// ─── Career Studio ───────────────────────────────────────────────────────────
+// The agents added to Dossier (docs/PRD.md). Every table lives in the
+// account's own schema like Dossier's; the JSON columns are validated with
+// the zod schemas in src/lib/career/*.
+
+// Resume builder ─────────────────────────────────────────────────────────────
+
+/// A named resume built from the profile ("Product design", "Frontend"),
+/// with its own text, theme and history. Its units follow Dossier's
+/// tailored-resume units (unitsSchema), so the same renderer prints it.
+model ResumeVersion {
+  id             String                  @id @default(cuid())
+  name           String                  @default("")
+  /// The role it aims at, in the user's words.
+  target         String                  @default("")
+  /// A job description it was tailored to, if any.
+  jobDescription String                  @default("")
+  units          Json
+  themeId        String?
+  theme          Theme?                  @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  /// The application it was made for, if any.
+  applicationId  String?
+  application    Application?            @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  /// The prompt version that last wrote its units.
+  writtenWith    String?
+  /// The coach's last review: questions for missing facts and suggestions (coachSchema).
+  coach          Json?
+  coachedWith    String?
+  snapshots      ResumeVersionSnapshot[]
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([updatedAt])
+}
+
+/// A resume version's units as they were before a change, for undo and history.
+model ResumeVersionSnapshot {
+  id        String        @id @default(cuid())
+  versionId String
+  version   ResumeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  units     Json
+  /// What changed: "Written", "Tailored", "Edited", "Restored"…
+  cause     String        @default("")
+  createdAt DateTime      @default(now())
+
+  @@index([versionId, createdAt])
+}
+
+// Mock interviews and interview loops ───────────────────────────────────────
+
+enum InterviewFocus {
+  MIXED
+  BEHAVIORAL
+  TECHNICAL
+  ROLE
+}
+
+enum InterviewDifficulty {
+  WARMUP
+  STANDARD
+  TOUGH
+}
+
+enum InterviewStatus {
+  ACTIVE
+  COMPLETED
+}
+
+/// One practice session for a role: questions one at a time, feedback on
+/// each answer, and a report at the end.
+model InterviewSession {
+  id             String              @id @default(cuid())
+  title          String              @default("")
+  company        String              @default("")
+  role           String              @default("")
+  jobDescription String              @default("")
+  focus          InterviewFocus      @default(MIXED)
+  difficulty     InterviewDifficulty @default(STANDARD)
+  /// How many main questions to ask (follow-ups come on top).
+  questionTarget Int                 @default(5)
+  /// Who's asking, for a round of an interview loop ("Hiring manager: …"); empty for a general session.
+  interviewer    String              @default("")
+  status         InterviewStatus     @default(ACTIVE)
+  applicationId  String?
+  application    Application?        @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  roundId        String?
+  round          InterviewRound?     @relation(fields: [roundId], references: [id], onDelete: SetNull)
+  /// The competencies the session covers, planned at the start (planSchema).
+  plan           Json?
+  /// The end-of-session report (reportSchema).
+  report         Json?
+  writtenWith    String?
+  turns          InterviewTurn[]
+  completedAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([createdAt])
+  @@index([roundId])
+  @@index([applicationId])
+}
+
+/// A question (or follow-up), the answer, and the feedback on it.
+model InterviewTurn {
+  id         String           @id @default(cuid())
+  sessionId  String
+  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  /// 0-based order within the session.
+  index      Int
+  /// "question" or "follow-up".
+  kind       String           @default("question")
+  competency String           @default("")
+  question   String
+  /// What the interviewer listens for, kept from the user until they've answered.
+  lookingFor String           @default("")
+  answer     String           @default("")
+  /// feedbackSchema: score, strengths, gaps, a stronger answer.
+  feedback   Json?
+  answeredAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@unique([sessionId, index])
+}
+
+enum LoopStatus {
+  ACTIVE
+  OFFER
+  CLOSED
+}
+
+enum RoundKind {
+  RECRUITER_SCREEN
+  HIRING_MANAGER
+  TECHNICAL
+  SYSTEM_DESIGN
+  CASE
+  TAKE_HOME
+  BEHAVIORAL
+  PANEL
+  FINAL
+  OTHER
+}
+
+enum RoundStatus {
+  UPCOMING
+  DONE
+  CANCELLED
+}
+
+/// A hiring process with several rounds at one company, usually for one application.
+model InterviewLoop {
+  id             String           @id @default(cuid())
+  company        String           @default("")
+  role           String           @default("")
+  jobDescription String           @default("")
+  applicationId  String?          @unique
+  application    Application?     @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  status         LoopStatus       @default(ACTIVE)
+  notes          String           @default("")
+  rounds         InterviewRound[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([status, updatedAt])
+}
+
+/// One round of a loop: when, who, what they screen for, the prep for it and how it went.
+model InterviewRound {
+  id              String             @id @default(cuid())
+  loopId          String
+  loop            InterviewLoop      @relation(fields: [loopId], references: [id], onDelete: Cascade)
+  sort            Int                @default(0)
+  kind            RoundKind          @default(OTHER)
+  title           String             @default("")
+  /// Who interviews, as the user knows it ("Priya, engineering manager").
+  interviewer     String             @default("")
+  /// What this interviewer screens for, in the user's words or as suggested.
+  perspective     String             @default("")
+  scheduledAt     DateTime?
+  durationMinutes Int?
+  status          RoundStatus        @default(UPCOMING)
+  /// The prep plan for this round (prepSchema).
+  prep            Json?
+  preparedWith    String?
+  /// The user's notes afterwards, including feedback they were given.
+  notes           String             @default("")
+  sessions        InterviewSession[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([loopId, sort])
+  @@index([scheduledAt])
+}
+
+// Freelancing ────────────────────────────────────────────────────────────────
+
+enum OpportunityStatus {
+  NEW
+  SAVED
+  PURSUING
+  DISMISSED
+}
+
+/// A freelance or contract opportunity from a public source, kept with what
+/// the user did with it and how well it fits.
+model FreelanceOpportunity {
+  id          String            @id @default(cuid())
+  /// REMOTIVE, JOBICY, REMOTEOK, HIMALAYAS or HN.
+  source      String
+  externalId  String
+  title       String            @default("")
+  client      String            @default("")
+  /// The listing on its source (attribution links here).
+  url         String            @default("")
+  description String            @default("")
+  /// As the source writes it, e.g. "$60–$90/hr" or "€40k–€55k".
+  budget      String            @default("")
+  /// "contract", "freelance", "part-time"…, as the source says.
+  kind        String            @default("")
+  location    String            @default("")
+  tags        Json
+  postedAt    DateTime?
+  /// Fit for the user: 0–100, with reasons, gaps and concerns (fitSchema).
+  score       Int?
+  fit         Json?
+  scoredWith  String?
+  status      OpportunityStatus @default(NEW)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([source, externalId])
+  @@index([status, score])
+  @@index([postedAt])
+}
+
+enum UpworkStatus {
+  EVALUATING
+  APPLIED
+  SKIPPED
+}
+
+/// An Upwork job the user pasted, with the numbers they entered, the
+/// analysis, the proposal and screening answers.
+model UpworkAnalysis {
+  id           String       @id @default(cuid())
+  title        String       @default("")
+  jobText      String
+  jobUrl       String       @default("")
+  /// What the user entered from Upwork (inputsSchema): Connects, boost, fee rate…
+  inputs       Json
+  /// The analysis (upworkAnalysisSchema).
+  analysis     Json?
+  analyzedWith String?
+  proposal     String       @default("")
+  proposalWith String?
+  /// [{ question, answer }]
+  screening    Json?
+  status       UpworkStatus @default(EVALUATING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([updatedAt])
+}
+
+// Skill arbitrage ────────────────────────────────────────────────────────────
+
+enum SkillPlanStatus {
+  ACTIVE
+  DONE
+  ARCHIVED
+}
+
+/// A plan to develop one skill for a target role, sized to the user's time.
+model SkillPlan {
+  id             String          @id @default(cuid())
+  title          String          @default("")
+  targetRole     String          @default("")
+  jobDescription String          @default("")
+  skill          String          @default("")
+  hoursPerWeek   Int             @default(5)
+  weeks          Int             @default(8)
+  /// Anything else the user said about their starting point.
+  context        String          @default("")
+  applicationId  String?
+  application    Application?    @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  /// Strengths, transferable experience, gaps, readiness (assessmentSchema).
+  assessment     Json?
+  /// Phases and steps (skillPlanSchema).
+  plan           Json?
+  writtenWith    String?
+  /// Ids of the steps done.
+  progress       Json
+  status         SkillPlanStatus @default(ACTIVE)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([status, updatedAt])
 }

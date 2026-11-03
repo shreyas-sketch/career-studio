@@ -15,3 +15,7 @@ import "@/lib/agent/draft";
 import "./score-posting";
 import "@/lib/startups/refresh";
 import "@/lib/connector/draft";
+import "@/lib/career/interviews";
+import "@/lib/career/upwork";
+import "@/lib/career/skill-plans";
+import "@/lib/career/freelance";

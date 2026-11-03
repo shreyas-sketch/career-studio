@@ -46,6 +46,14 @@ export const ACCOUNTS_DDL = [
     blocked_until TIMESTAMPTZ,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+  // Public listings fetched for every account (Career Studio's freelance
+  // sources), cached so each source is polled within its limits.
+  `CREATE SCHEMA IF NOT EXISTS cs_shared`,
+  `CREATE TABLE IF NOT EXISTS cs_shared.feed_cache (
+    key TEXT PRIMARY KEY,
+    payload JSONB NOT NULL,
+    fetched_at TIMESTAMPTZ NOT NULL
+  )`,
 ];
 
 /** Creates the shared schema once per process. */

@@ -63,11 +63,12 @@ beforeEach(() => {
 });
 
 describe("the Claude connector at /api/mcp (#221)", () => {
-  it("isn't there while the connector is off", async () => {
+  it("refuses tokens once the account turns its connector off", async () => {
+    // Career Studio: the endpoint serves every account, so it can't 404 for
+    // one; a token whose account turned the connector off is no longer valid.
     const token = await accessToken();
     settings.connectorEnabledAt = null;
-    expect((await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, token)).status).toBe(404);
-    expect((await GET(new Request("https://dossier.example/api/mcp"))).status).toBe(404);
+    expect((await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, token)).status).toBe(401);
   });
 
   it("asks Claude to sign in, and says where to find out how", async () => {

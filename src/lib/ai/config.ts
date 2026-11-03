@@ -86,7 +86,16 @@ export function resolveAiConfig(saved: SavedSettings | null, source: AiEnv, secr
 
 /** The AI configuration in effect right now. */
 export async function loadAiConfig(): Promise<AiConfig> {
-  return resolveAiConfig(await loadSettings(), env);
+  return resolveAiConfig(await loadSettings(), hostedEnv());
+}
+
+/**
+ * Career Studio: each account brings its own provider and key, so the
+ * operator's DOSSIER_AI_* variables never stand in for one (that would bill
+ * every account's AI use to the operator). Only the timeout still applies.
+ */
+function hostedEnv(): AiEnv {
+  return { DOSSIER_AI_PROVIDER: undefined, DOSSIER_AI_URL: undefined, DOSSIER_AI_MODEL: undefined, DOSSIER_AI_KEY: undefined, DOSSIER_AI_TIMEOUT_SECONDS: env.DOSSIER_AI_TIMEOUT_SECONDS };
 }
 
 /**
@@ -95,7 +104,7 @@ export async function loadAiConfig(): Promise<AiConfig> {
  */
 export async function loadAiSettingsView(): Promise<AiSettingsView> {
   const saved = await loadSettings();
-  const config = resolveAiConfig(saved, env);
+  const config = resolveAiConfig(saved, hostedEnv());
   return {
     provider: config.provider,
     baseUrl: config.baseUrl,
@@ -112,7 +121,6 @@ export function keyStateOf(saved: { provider: AiProvider | null; apiKeyEnc: stri
 
 /** Whether an AI provider has been chosen, in Settings or with DOSSIER_AI_PROVIDER. */
 export async function isAiConfigured(): Promise<boolean> {
-  if (env.DOSSIER_AI_PROVIDER) return true;
   return Boolean((await loadSettings()).provider);
 }
 

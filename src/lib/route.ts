@@ -6,6 +6,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getSession, type Session } from "@/lib/auth/session";
 import { logServerError } from "@/lib/log";
 import { messages } from "@/lib/messages";
+import { runAsUser } from "@/lib/tenancy/context";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -64,7 +65,7 @@ export function route<Context = unknown>(
 
     let response: Response;
     try {
-      response = await handler(request, context, session);
+      response = await runAsUser(session.userId, () => handler(request, context, session));
     } catch (error) {
       unstable_rethrow(error);
       logServerError(`${request.method} ${request.nextUrl.pathname}`, error);

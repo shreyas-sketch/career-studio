@@ -11,6 +11,7 @@ import { loadSettings } from "@/lib/settings-data";
 import { lastKnownTimeZone } from "@/lib/time-zone";
 
 import { AGENT_JOB_KEY, agentScanJob } from "./jobs";
+import { forEachUser } from "@/lib/tenancy/each-user";
 
 // The job agent's daily run (E16-4): a timer in this process, like the
 // nightly backups and the inbox check, so it's only right with one instance.
@@ -68,8 +69,8 @@ const globalForAgent = globalThis as unknown as { agentTimer?: ReturnType<typeof
 /** Starts the timer, once per process (dev reloads keep the one they have). */
 export function startAgentSchedule(): void {
   if (globalForAgent.agentTimer) return;
-  void resetInterruptedDrafts().catch((error: unknown) => logServerError("job agent", error));
-  const check = () => void startDueRun().catch((error: unknown) => logServerError("job agent schedule", error));
+  void forEachUser("job agent", () => resetInterruptedDrafts()).catch((error: unknown) => logServerError("job agent", error));
+  const check = () => void forEachUser("job agent schedule", () => startDueRun()).catch((error: unknown) => logServerError("job agent schedule", error));
   globalForAgent.agentTimer = setInterval(check, EVERY_MS);
   // Don't keep the process alive just for this.
   globalForAgent.agentTimer.unref?.();

@@ -1,29 +1,20 @@
 import "server-only";
 
-import { PrismaPg } from "@prisma/adapter-pg";
-
-import { PrismaClient } from "@/generated/prisma/client";
-import { env } from "@/lib/env";
-
-// Reuse one client across hot reloads in development instead of opening a new
-// connection pool on every change.
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-
-function client(): PrismaClient {
-  globalForPrisma.prisma ??= new PrismaClient({
-    adapter: new PrismaPg({ connectionString: env.DATABASE_URL }),
-  });
-  return globalForPrisma.prisma;
-}
+import type { PrismaClient } from "@/generated/prisma/client";
+import { clientForUser } from "@/lib/tenancy/clients";
+import { requireUserId } from "@/lib/tenancy/context";
 
 /**
- * The shared database client. It's created on first use rather than on
- * import, so `next build`, which imports every page, works without the
- * secrets that reading `env` requires.
+ * The database client for the signed-in user's own data. It looks the user
+ * up on every access (src/lib/tenancy/context.ts) and uses the client bound
+ * to their schema, so code written for Dossier's single user works per user
+ * unchanged. Without a user it throws NoTenantError rather than touch any
+ * data. The shared tables (accounts, sessions) are reached with
+ * src/lib/accounts/db.ts instead.
  */
 export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
   get(_, key) {
-    const target = client();
+    const target = clientForUser(requireUserId());
     const value = Reflect.get(target, key, target);
     return typeof value === "function" ? value.bind(target) : value;
   },

@@ -5,6 +5,8 @@ vi.mock("@/lib/env", () => ({ env }));
 const settings = vi.hoisted(() => ({ connectorEnabledAt: "2026-10-23T09:00:00.000Z" as string | null, connectorRedirects: ["https://n8n.example/rest/oauth2-credential/callback"] }));
 vi.mock("@/lib/settings-data", () => ({ loadSettings: async () => settings }));
 
+import { TEST_USER_ID } from "@/lib/tenancy/context";
+
 import {
   addedRedirects,
   allowedRedirect,
@@ -92,12 +94,12 @@ describe("the Claude connector's sign-in (#221)", () => {
     const { clientId, code } = await signIn();
     const tokens = await exchangeCode({ code, clientId, redirectUri: CLAUDE, verifier: VERIFIER });
     expect(tokens).toMatchObject({ token_type: "Bearer", expires_in: 3600, scope: "dossier" });
-    expect(await verifyAccessToken(tokens.access_token)).toEqual({ clientId });
+    expect(await verifyAccessToken(tokens.access_token)).toEqual({ clientId, userId: TEST_USER_ID });
     // A refresh token isn't an access token.
     expect(await verifyAccessToken(tokens.refresh_token)).toBeNull();
 
     const renewed = await refresh({ refreshToken: tokens.refresh_token, clientId });
-    expect(await verifyAccessToken(renewed.access_token)).toEqual({ clientId });
+    expect(await verifyAccessToken(renewed.access_token)).toEqual({ clientId, userId: TEST_USER_ID });
     await expect(refresh({ refreshToken: tokens.refresh_token, clientId: "someone else" })).rejects.toThrow("The refresh token is invalid or has expired.");
   });
 
@@ -111,7 +113,7 @@ describe("the Claude connector's sign-in (#221)", () => {
     await expect(exchangeCode({ code: "forged", clientId, redirectUri: CLAUDE, verifier: VERIFIER })).rejects.toThrow("The code is invalid or has expired.");
   });
 
-  it("signs Claude out on Disconnect Claude, when the connector goes off, and with a new password", async () => {
+  it("signs Claude out on Disconnect Claude, and when the connector goes off", async () => {
     const { clientId, code } = await signIn();
     const tokens = await exchangeCode({ code, clientId, redirectUri: CLAUDE, verifier: VERIFIER });
 
@@ -128,12 +130,12 @@ describe("the Claude connector's sign-in (#221)", () => {
     expect(await verifyAccessToken(freshTokens.access_token)).toBeNull();
     await expect(signIn()).rejects.toThrow("The MCP connector is off.");
 
-    // A new password, like every browser session.
+    // Career Studio: tokens name their account, and are checked against that
+    // account's own connector switch, not whoever is signed in elsewhere.
     settings.connectorEnabledAt = "2026-10-23T11:00:00.000Z";
     const again = await signIn();
     const againTokens = await exchangeCode({ code: again.code, clientId: again.clientId, redirectUri: CLAUDE, verifier: VERIFIER });
-    env.DOSSIER_PASSWORD = "argon2id:m=19456,t=2,p=1:c2FsdA:bmV3";
-    expect(await verifyAccessToken(againTokens.access_token)).toBeNull();
+    expect(await verifyAccessToken(againTokens.access_token)).toEqual({ clientId: again.clientId, userId: TEST_USER_ID });
   });
 
   it("describes itself at the addresses Claude looks for", () => {

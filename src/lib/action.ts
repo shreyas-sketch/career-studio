@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getSession, type Session } from "@/lib/auth/session";
 import { logServerError } from "@/lib/log";
+import { runAsUser } from "@/lib/tenancy/context";
 import { messages } from "@/lib/messages";
 
 /**
@@ -52,7 +53,8 @@ export function action<S extends z.ZodType, T>(
   return async (input) => {
     const session = await getSession();
     if (!session) return { ok: false, error: messages.signedOut };
-    return run(schema, input, (data, toast) => handler(data, { session, toast }));
+    // Everything the action does runs as the signed-in user (src/lib/tenancy).
+    return runAsUser(session.userId, () => run(schema, input, (data, toast) => handler(data, { session, toast })));
   };
 }
 

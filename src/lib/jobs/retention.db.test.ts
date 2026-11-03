@@ -8,6 +8,7 @@ import { saveSettings } from "@/lib/settings-data";
 import { createTestClient, resetDatabase } from "@/test/db";
 
 import { sweepFinishedJobs } from "./retention";
+import { TEST_USER_ID } from "@/lib/tenancy/context";
 
 const db = vi.hoisted(() => ({ client: undefined as ReturnType<typeof createTestClient> | undefined }));
 vi.mock("@/lib/prisma", async () => {
@@ -62,7 +63,7 @@ describe("sweepFinishedJobs", () => {
   });
 
   it("removes zips nobody downloaded", async () => {
-    const downloads = path.join(dataDir.path, "downloads");
+    const downloads = path.join(dataDir.path, "accounts", TEST_USER_ID, "downloads");
     await mkdir(downloads, { recursive: true });
     await writeFile(path.join(downloads, "old.zip"), "zip");
     await writeFile(path.join(downloads, "new.zip"), "zip");

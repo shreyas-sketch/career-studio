@@ -6,6 +6,7 @@ import type { SettingsData } from "@/lib/settings";
 import { loadSettings } from "@/lib/settings-data";
 
 import { startStartupsRefresh, STARTUPS_JOB_KEY } from "./refresh";
+import { forEachUser } from "@/lib/tenancy/each-user";
 
 // Startups' daily refresh (#222): a timer in this process, like the job
 // agent's. Nothing is fetched until the user presses Refresh once, and the
@@ -38,7 +39,7 @@ const globalForStartups = globalThis as unknown as { startupsTimer?: ReturnType<
 /** Starts the timer, once per process (dev reloads keep the one they have). */
 export function startStartupsSchedule(): void {
   if (globalForStartups.startupsTimer) return;
-  const check = () => void startDueStartupsRefresh().catch((error: unknown) => logServerError("startups schedule", error));
+  const check = () => void forEachUser("startups schedule", () => startDueStartupsRefresh()).catch((error: unknown) => logServerError("startups schedule", error));
   globalForStartups.startupsTimer = setInterval(check, EVERY_MS);
   // Don't keep the process alive just for this.
   globalForStartups.startupsTimer.unref?.();

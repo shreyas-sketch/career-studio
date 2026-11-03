@@ -12,6 +12,7 @@ import { seedBuiltIns } from "../../../../prisma/seed/built-ins";
 import { seedDemo } from "../../../../prisma/seed/demo";
 
 import { deleteEverything } from "./actions";
+import { TEST_USER_ID } from "@/lib/tenancy/context";
 
 const db = vi.hoisted(() => ({ client: undefined as ReturnType<typeof createTestClient> | undefined }));
 vi.mock("@/lib/prisma", async () => {
@@ -20,7 +21,7 @@ vi.mock("@/lib/prisma", async () => {
   return { prisma: db.client };
 });
 vi.mock("@/lib/auth/session", () => ({
-  getSession: async () => ({ persistent: false, issuedAt: new Date(), expiresAt: new Date(Date.now() + 60_000) }),
+  getSession: async () => ({ userId: "7e570000000000000000000a", sessionId: "0123456789abcdef", persistent: false, expiresAt: new Date(Date.now() + 60_000) }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const redirected = vi.hoisted(() => ({ to: "" }));
@@ -42,8 +43,8 @@ const snapshot = async () => JSON.stringify({ ...(await buildExport(prisma(), { 
 
 beforeEach(async () => {
   dataDir.path = await mkdtemp(path.join(tmpdir(), "dossier-delete-"));
-  await mkdir(path.join(dataDir.path, "backups"));
-  await writeFile(path.join(dataDir.path, "backups", "dossier-backup-nightly-2026-09-27-030000.json"), "{}");
+  await mkdir(path.join(dataDir.path, "accounts", TEST_USER_ID, "backups"), { recursive: true });
+  await writeFile(path.join(dataDir.path, "accounts", TEST_USER_ID, "backups", "dossier-backup-nightly-2026-09-27-030000.json"), "{}");
   redirected.to = "";
   await resetDatabase(prisma());
   await seedBuiltIns(prisma());
@@ -94,7 +95,7 @@ describe("deleteEverything (E10-8)", () => {
     ]);
     expect(counts).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(await prisma().theme.count({ where: { builtIn: true } })).toBe(12);
-    expect(await readdir(dataDir.path)).toEqual([]);
+    expect(await readdir(path.join(dataDir.path, "accounts", TEST_USER_ID, "backups")).catch(() => [])).toEqual([]);
   });
 
   it("does nothing without DELETE typed exactly", async () => {

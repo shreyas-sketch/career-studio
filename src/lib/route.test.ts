@@ -7,7 +7,7 @@ import { isSameOrigin, route } from "./route";
 
 vi.mock("./auth/session", () => ({ getSession: vi.fn() }));
 
-const session = { persistent: false, issuedAt: new Date(), expiresAt: new Date(Date.now() + 60_000) };
+const session = { userId: "7e570000000000000000000a", sessionId: "0123456789abcdef", persistent: false, expiresAt: new Date(Date.now() + 60_000) };
 
 function request(method: string, headers: Record<string, string> = {}) {
   return new NextRequest("http://localhost:3000/api/test", {

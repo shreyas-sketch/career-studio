@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { buildExport } from "@/lib/data-export";
 import { env } from "@/lib/env";
+import { requireUserId } from "@/lib/tenancy/context";
 import { prisma } from "@/lib/prisma";
 
 // Backups (E10-6, E10-7): exports written to DOSSIER_DATA_DIR/backups. They
@@ -12,7 +13,9 @@ import { prisma } from "@/lib/prisma";
 
 export type BackupReason = "before-import" | "nightly";
 
-export const backupsDir = () => path.join(env.DOSSIER_DATA_DIR, "backups");
+// Career Studio: each account has its own folder, so listing and restoring
+// backups can only ever see the signed-in account's files.
+export const backupsDir = () => path.join(env.DOSSIER_DATA_DIR, "accounts", requireUserId(), "backups");
 
 const pad = (value: number) => String(value).padStart(2, "0");
 

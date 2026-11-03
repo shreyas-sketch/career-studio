@@ -9,6 +9,7 @@ import { AiError } from "@/lib/ai/errors";
 import { providerOption } from "@/lib/ai/provider-options";
 import { logServerError } from "@/lib/log";
 import { prisma } from "@/lib/prisma";
+import { requireUserId, runAsUser } from "@/lib/tenancy/context";
 
 // Long AI tasks run as background jobs (E6-7): the request that starts one
 // returns at once with its id, the work goes on in this process, and the
@@ -60,7 +61,10 @@ type Listener = (job: JobView) => void;
 
 type RunnerState = {
   definitions: Map<string, JobDefinition<unknown, unknown>>;
+  /** Waiting job ids. */
   queue: string[];
+  /** Whose each queued or running job is: every job runs as its account. */
+  owners: Map<string, string>;
   running: Map<string, AbortController>;
   listeners: Map<string, Set<Listener>>;
   pumping: boolean;
@@ -71,6 +75,7 @@ const globalForJobs = globalThis as unknown as { jobRunner?: RunnerState };
 const state: RunnerState = (globalForJobs.jobRunner ??= {
   definitions: new Map(),
   queue: [],
+  owners: new Map(),
   running: new Map(),
   listeners: new Map(),
   pumping: false,
@@ -146,6 +151,7 @@ export async function cancelJob(id: string): Promise<void> {
   const queued = state.queue.indexOf(id);
   if (queued >= 0) {
     state.queue.splice(queued, 1);
+    state.owners.delete(id);
     await finish(id, { status: JobStatus.FAILED, error: JOB_MESSAGES.cancelled });
     return;
   }
@@ -189,29 +195,41 @@ async function finish(
 }
 
 function enqueue(id: string): void {
+  state.owners.set(id, requireUserId());
   if (!state.queue.includes(id)) state.queue.push(id);
   void pump();
 }
 
-async function concurrency(): Promise<number> {
-  try {
-    return providerOption((await loadAiConfig()).provider).local ? LOCAL_CONCURRENCY : HOSTED_CONCURRENCY;
-  } catch {
-    return LOCAL_CONCURRENCY;
-  }
+/**
+ * How many jobs run at once across all accounts. Each account brings its own
+ * AI provider and key, so the limit only keeps one server's load sensible;
+ * a single account gets at most PER_ACCOUNT of them, so it can't starve others.
+ */
+const TOTAL_CONCURRENCY = Math.max(HOSTED_CONCURRENCY, 6);
+const PER_ACCOUNT = HOSTED_CONCURRENCY;
+void LOCAL_CONCURRENCY;
+
+function runningFor(userId: string): number {
+  let count = 0;
+  for (const id of state.running.keys()) if (state.owners.get(id) === userId) count++;
+  return count;
 }
 
 async function pump(): Promise<void> {
   if (state.pumping) return;
   state.pumping = true;
   try {
-    const limit = await concurrency();
-    while (state.queue.length > 0 && state.running.size < limit) {
-      const id = state.queue.shift()!;
+    while (state.running.size < TOTAL_CONCURRENCY) {
+      const index = state.queue.findIndex((queued) => runningFor(state.owners.get(queued) ?? "") < PER_ACCOUNT);
+      if (index < 0) break;
+      const [id] = state.queue.splice(index, 1) as [string];
+      const owner = state.owners.get(id);
+      if (!owner) continue;
       const controller = new AbortController();
       state.running.set(id, controller);
-      void execute(id, controller).finally(() => {
+      void runAsUser(owner, () => execute(id, controller)).finally(() => {
         state.running.delete(id);
+        state.owners.delete(id);
         void pump();
       });
     }

@@ -106,27 +106,18 @@ describe("the job runner", () => {
     expect(await prisma().job.count()).toBe(1);
   });
 
-  it("runs one job at a time for a local model, more for hosted ones", async () => {
-    const first = await startJob(gated, { name: "First", fail: "no" });
-    const second = await startJob(gated, { name: "Second", fail: "no" });
-    await eventually(async () => (await status(first)).toBe("RUNNING"));
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    (await status(second)).toBe("QUEUED");
-    await release("First");
-    await eventually(async () => (await status(second)).toBe("RUNNING"));
-    await release("Second");
-    await eventually(async () => (await status(second)).toBe("DONE"));
-
-    ai.provider = "ANTHROPIC";
-    const a = await startJob(gated, { name: "A", fail: "no" });
-    const b = await startJob(gated, { name: "B", fail: "no" });
+  it("runs an account's jobs a few at a time, whatever its provider (Career Studio is hosted)", async () => {
+    const jobs = await Promise.all(["A", "B", "C", "D"].map((name) => startJob(gated, { name, fail: "no" })));
+    // Three at once per account; the fourth waits for one of them.
     await eventually(async () => {
-      (await status(a)).toBe("RUNNING");
-      (await status(b)).toBe("RUNNING");
+      for (const id of jobs.slice(0, 3)) (await status(id)).toBe("RUNNING");
     });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    (await status(jobs[3]!)).toBe("QUEUED");
     await release("A");
-    await release("B");
-    await eventually(async () => (await status(b)).toBe("DONE"));
+    await eventually(async () => (await status(jobs[3]!)).toBe("RUNNING"));
+    for (const name of ["B", "C", "D"]) await release(name);
+    await eventually(async () => (await status(jobs[3]!)).toBe("DONE"));
   });
 
   it("cancels an application's unfinished jobs, and only those", async () => {

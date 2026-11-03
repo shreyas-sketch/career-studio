@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { decodeSession, SESSION_COOKIE, sessionTokenOptions } from "@/lib/auth/session";
+import { decodeSessionToken, SESSION_COOKIE } from "@/lib/auth/session-token";
 import { contentSecurityPolicy, createNonce } from "@/lib/csp";
 import { messages } from "@/lib/messages";
 import { PRINT_TOKEN_HEADER, verifyPrintToken } from "@/lib/pdf/print-token";
+
+/** Pages anyone may open: signing in and creating an account. */
+const PUBLIC_PATHS = new Set(["/login", "/signup"]);
 
 /** The Claude connector's endpoint, its sign-in and the metadata that points to them. */
 const CONNECTOR_PATHS = /^\/(?:api\/(?:mcp|oauth)(?:\/|$)|\.well-known\/oauth-(?:authorization-server|protected-resource)(?:\/|$))/;
@@ -17,15 +20,12 @@ const CONNECTOR_PATHS = /^\/(?:api\/(?:mcp|oauth)(?:\/|$)|\.well-known\/oauth-(?
  */
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  if (pathname === "/login") return pass(request);
+  if (PUBLIC_PATHS.has(pathname)) return pass(request);
   // The Claude connector (#221) brings its own credentials, an OAuth token,
   // which its routes check; they answer 404 while it's off.
   if (CONNECTOR_PATHS.test(pathname)) return NextResponse.next();
 
-  const session = await decodeSession(
-    request.cookies.get(SESSION_COOKIE)?.value,
-    sessionTokenOptions(),
-  );
+  const session = decodeSessionToken(request.cookies.get(SESSION_COOKIE)?.value);
   if (session) return pass(request);
 
   // Server Actions answer a signed-out call with a friendly error themselves

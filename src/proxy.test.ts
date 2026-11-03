@@ -3,7 +3,7 @@ import { getRedirectUrl, unstable_doesMiddlewareMatch } from "next/experimental/
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { encodeSession, passwordFingerprint, SESSION_COOKIE } from "@/lib/auth/session";
+import { encodeSessionToken, SESSION_COOKIE } from "@/lib/auth/session-token";
 import { deriveKey } from "@/lib/keys";
 import { messages } from "@/lib/messages";
 import { PRINT_TOKEN_HEADER, signPrintToken } from "@/lib/pdf/print-token";
@@ -15,7 +15,9 @@ vi.mock("@/lib/env", () => ({
 }));
 
 const key = deriveKey("session", "a".repeat(32));
-const fingerprint = passwordFingerprint("correct horse", deriveKey("password-fingerprint", "a".repeat(32)));
+/** A genuine session token for a test account, as signing in sets it. */
+const sessionToken = (expiresAt = new Date(Date.now() + 60 * 60 * 1000)) =>
+  encodeSessionToken({ userId: "7e570000000000000000000a", sessionId: "0123456789abcdef", persistent: false, expiresAt }, key);
 
 const matches = (url: string) => unstable_doesMiddlewareMatch({ config, nextConfig: {}, url });
 
@@ -49,13 +51,13 @@ describe("proxy matcher", () => {
 
 describe("proxy", () => {
   it("lets signed-in requests through", async () => {
-    const token = await encodeSession({ persistent: false }, { key, fingerprint });
+    const token = sessionToken();
     const response = await proxy(request("/profile", { cookie: token }));
     expect(response.headers.get("x-middleware-next")).toBe("1");
   });
 
   it("gives pages a Content-Security-Policy with a fresh nonce, for the browser and for Next.js (E11-5)", async () => {
-    const token = await encodeSession({ persistent: false }, { key, fingerprint });
+    const token = sessionToken();
     const first = await proxy(request("/profile", { cookie: token }));
     const second = await proxy(request("/login"));
     const policy = first.headers.get("content-security-policy");
@@ -74,7 +76,7 @@ describe("proxy", () => {
   });
 
   it("leaves API answers without a policy", async () => {
-    const token = await encodeSession({ persistent: false }, { key, fingerprint });
+    const token = sessionToken();
     const response = await proxy(request("/api/pdf/1", { cookie: token }));
     expect(response.headers.get("x-middleware-next")).toBe("1");
     expect(response.headers.get("content-security-policy")).toBeNull();
@@ -87,16 +89,20 @@ describe("proxy", () => {
     expect(getRedirectUrl(await proxy(request("/")))).toBe("http://localhost:3000/login");
   });
 
-  it("treats an expired, forged or pre-password-change cookie as signed out", async () => {
-    const expired = await encodeSession(
-      { persistent: false },
-      { key, fingerprint, now: new Date(Date.now() - 25 * 60 * 60 * 1000) },
+  it("treats an expired or forged cookie as signed out", async () => {
+    const expired = sessionToken(new Date(Date.now() - 1000));
+    const forged = encodeSessionToken(
+      { userId: "7e570000000000000000000a", sessionId: "0123456789abcdef", persistent: true, expiresAt: new Date(Date.now() + 60_000) },
+      deriveKey("session", "b".repeat(32)),
     );
-    const forged = await encodeSession({ persistent: true }, { key: deriveKey("session", "b".repeat(32)), fingerprint });
-    const oldPassword = await encodeSession({ persistent: true }, { key, fingerprint: "stale-fingerprint" });
-    for (const cookie of [expired, forged, oldPassword, "garbage"]) {
+    const otherAccount = sessionToken().replace("7e570000000000000000000a", "7e570000000000000000000b");
+    for (const cookie of [expired, forged, otherAccount, "garbage"]) {
       expect(getRedirectUrl(await proxy(request("/profile", { cookie })))).toContain("/login");
     }
+  });
+
+  it("lets anyone open the sign-up page", async () => {
+    expect((await proxy(request("/signup"))).headers.get("x-middleware-next")).toBe("1");
   });
 
   it("lets the Claude connector's endpoint, sign-in and metadata through without a session (#221)", async () => {

@@ -30,7 +30,14 @@ describe("parseEnv", () => {
       DOSSIER_DATA_DIR: "/data",
       DOSSIER_BACKUP_RETENTION_DAYS: 14,
       DOSSIER_TELEMETRY: undefined,
+      CAREER_STUDIO_SIGNUPS: "open",
     });
+  });
+
+  it("reads whether new accounts may be created, and the invite code", () => {
+    expect(parseEnv({ ...valid, CAREER_STUDIO_SIGNUPS: "closed" }).CAREER_STUDIO_SIGNUPS).toBe("closed");
+    expect(parseEnv({ ...valid, CAREER_STUDIO_INVITE_CODE: " team-2026 " }).CAREER_STUDIO_INVITE_CODE).toBe("team-2026");
+    expect(() => parseEnv({ ...valid, CAREER_STUDIO_SIGNUPS: "maybe" })).toThrow();
   });
 
   it("reads whether the usage ping is on", () => {
@@ -77,24 +84,21 @@ describe("parseEnv", () => {
     const env = parseEnv({ ...valid, DOSSIER_AI_KEY: "", DOSSIER_DATA_DIR: " " });
     expect(env.DOSSIER_AI_KEY).toBeUndefined();
     expect(env.DOSSIER_DATA_DIR).toBe("/data");
-    expect(problems({ ...valid, DOSSIER_PASSWORD: "" })).toEqual([
-      expect.stringMatching(/^DOSSIER_PASSWORD is not set\./),
+    expect(problems({ ...valid, DOSSIER_SECRET: "" })).toEqual([
+      expect.stringMatching(/^DOSSIER_SECRET is not set\./),
     ]);
   });
 
   it("names every missing required variable", () => {
     expect(problems({})).toEqual([
-      expect.stringMatching(/^DOSSIER_PASSWORD is not set\. Set it to/),
       expect.stringMatching(/^DOSSIER_SECRET is not set\. .*openssl rand/),
       expect.stringMatching(/^DATABASE_URL is not set\. /),
     ]);
   });
 
-  it("wants a hash of the password, not the password itself", () => {
-    expect(problems({ ...valid, DOSSIER_PASSWORD: "correct horse" })).toEqual([
-      expect.stringMatching(/^DOSSIER_PASSWORD must be a hash of your password, not the password itself\. .*hash-password/),
-    ]);
-    expect(parseEnv({ ...valid, DOSSIER_PASSWORD: ` ${PASSWORD_HASH}\n` }).DOSSIER_PASSWORD).toBe(PASSWORD_HASH);
+  it("no longer needs DOSSIER_PASSWORD: Career Studio has accounts", () => {
+    const { DOSSIER_PASSWORD: _unused, ...withoutPassword } = valid;
+    expect(() => parseEnv(withoutPassword)).not.toThrow();
   });
 
   it("rejects a secret shorter than 32 characters", () => {

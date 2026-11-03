@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest";
 // route handlers through route(); these are the only exceptions.
 const SIGNED_OUT_ACTIONS = new Map([
   // publicAction: signing in, and the same through the form's own submit (#187)
-  ["src/app/login/actions.ts", ["signIn", "signInWithForm"]],
+  // publicAction: creating an account too, and its form fallback (Career Studio)
+  ["src/app/login/actions.ts", ["signIn", "signInWithForm", "signUp", "signUpWithForm"]],
   ["src/lib/auth/actions.ts", ["signOut"]], // only clears the cookie
 ]);
 const OPEN_ROUTES = new Set([
@@ -61,6 +62,7 @@ describe("session checks (E11-5)", () => {
       (file) =>
         !file.startsWith("src/app/(app)/") &&
         !file.startsWith("src/app/login/") &&
+        !file.startsWith("src/app/signup/") &&
         !/await (verifySession|verifyPrintAccess)\(/.test(read(file)),
     );
     expect(unchecked).toEqual([]);
@@ -72,12 +74,18 @@ describe("session checks (E11-5)", () => {
     expect(source).toContain("await verifyState(");
   });
 
-  it("checks the token and the switch in the Claude connector itself (#221)", () => {
+  it("checks the token and the account's own switch in the Claude connector itself (#221)", () => {
     const mcp = read("src/app/api/mcp/route.ts");
     expect(mcp).toContain("await verifyAccessToken(");
-    for (const file of [...OPEN_ROUTES].filter((entry) => /\/api\/(mcp|oauth)\//.test(entry))) {
-      expect(read(file), file).toContain("if (!(await connectorSince())) return new Response(null, { status: 404 });");
-    }
+    // Career Studio: the OAuth endpoints serve every account; the MCP endpoint
+    // checks the account named in the token, and runs as that account.
+    expect(mcp).toContain("runAsUser(access.userId, () => connectorSince())");
+    expect(mcp).toContain("runAsUser(access.userId, () => handler.fetch(");
+  });
+
+  it("runs every Server Action and route handler as the signed-in account", () => {
+    expect(read("src/lib/action.ts")).toContain("runAsUser(session.userId,");
+    expect(read("src/lib/route.ts")).toContain("runAsUser(session.userId,");
   });
 
   it("defines every route handler with route()", () => {

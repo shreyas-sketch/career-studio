@@ -23,10 +23,25 @@ vi.mock("next/navigation", () => ({
   },
 }));
 vi.mock("@/lib/env", () => ({ env: { DOSSIER_SECRET: "s".repeat(32), DOSSIER_PASSWORD: "correct horse" } }));
+// The sessions table, as a map: id → user id.
+const sessions = vi.hoisted(() => new Map<string, string>());
+vi.mock("@/lib/accounts/db", () => ({
+  accountsQuery: async (sql: string, values: unknown[] = []) => {
+    if (sql.startsWith("INSERT")) sessions.set(values[0] as string, values[1] as string);
+    if (sql.startsWith("DELETE") && sql.includes("WHERE id = $1")) sessions.delete(values[0] as string);
+    if (sql.startsWith("SELECT last_seen_at")) {
+      const live = sessions.get(values[0] as string) === values[1];
+      return { rows: live ? [{ last_seen_at: new Date() }] : [] };
+    }
+    return { rows: [] };
+  },
+}));
+const USER = "7e570000000000000000000a";
 // React's per-request cache would keep the first answer across tests.
 vi.mock("react", async (importOriginal) => ({ ...(await importOriginal<typeof import("react")>()), cache: <T,>(fn: T) => fn }));
 
 beforeEach(() => {
+  sessions.clear();
   jar.values.clear();
   jar.set.mockClear();
   jar.remove.mockClear();
@@ -35,14 +50,14 @@ beforeEach(() => {
 
 describe("the session cookie (E3-1)", () => {
   it("starts a browser session: an HTTP-only, same-site cookie without an expiry", async () => {
-    await startSession({ persistent: false });
+    await startSession({ userId: USER, persistent: false });
     expect(jar.set).toHaveBeenCalledWith(SESSION_COOKIE, expect.any(String), { httpOnly: true, sameSite: "lax", path: "/", secure: false });
-    expect(await getSession()).toMatchObject({ persistent: false });
+    expect(await getSession()).toMatchObject({ userId: USER, persistent: false });
   });
 
   it("keeps a remembered session for 30 days, secure behind an HTTPS proxy", async () => {
     jar.proto = "https, http";
-    await startSession({ persistent: true });
+    await startSession({ userId: USER, persistent: true });
     expect(jar.set).toHaveBeenCalledWith(SESSION_COOKIE, expect.any(String), expect.objectContaining({ secure: true, maxAge: SESSION_LIFETIME.persistent }));
   });
 
@@ -54,14 +69,23 @@ describe("the session cookie (E3-1)", () => {
 
   it("sends visitors without a session to the sign-in page", async () => {
     await expect(verifySession()).rejects.toThrow("redirect /login");
-    await startSession({ persistent: false });
+    await startSession({ userId: USER, persistent: false });
     await expect(verifySession()).resolves.toMatchObject({ persistent: false });
   });
 
-  it("ends the session by deleting the cookie", async () => {
-    await startSession({ persistent: false });
+  it("ends the session by deleting the cookie and its row", async () => {
+    await startSession({ userId: USER, persistent: false });
     await endSession();
     expect(jar.remove).toHaveBeenCalledWith(SESSION_COOKIE);
+    expect(sessions.size).toBe(0);
+    expect(await getSession()).toBeNull();
+  });
+
+  it("treats a genuine cookie whose session was removed (signed out elsewhere) as signed out", async () => {
+    await startSession({ userId: USER, persistent: true });
+    const token = jar.values.get(SESSION_COOKIE)!;
+    sessions.clear();
+    jar.values.set(SESSION_COOKIE, token);
     expect(await getSession()).toBeNull();
   });
 });

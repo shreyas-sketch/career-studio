@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { loadSettings } from "@/lib/settings-data";
 
 import { removeOldZips } from "./zip-pdfs";
+import { forEachUser } from "@/lib/tenancy/each-user";
 
 // A finished job is only needed for a while: for a reload to find it again,
 // for Undo on its toast, for a resume reading or a New application draft
@@ -38,7 +39,7 @@ const globalForSweep = globalThis as unknown as { jobSweepTimer?: ReturnType<typ
 /** Sweeps now and every 15 minutes, once per process (dev reloads keep the timer they have). */
 export function startJobSweep(): void {
   if (globalForSweep.jobSweepTimer) return;
-  const sweep = () => void sweepFinishedJobs().catch((error: unknown) => logServerError("job sweep", error));
+  const sweep = () => void forEachUser("job sweep", () => sweepFinishedJobs()).catch((error: unknown) => logServerError("job sweep", error));
   globalForSweep.jobSweepTimer = setInterval(sweep, EVERY_MS);
   // Don't keep the process alive just for this.
   globalForSweep.jobSweepTimer.unref?.();

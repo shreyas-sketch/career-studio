@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth/session";
 import { getJob } from "@/lib/jobs/runner";
 
 import { GET } from "./route";
+import { TEST_USER_ID } from "@/lib/tenancy/context";
 
 vi.mock("@/lib/auth/session", () => ({ getSession: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
@@ -21,9 +22,9 @@ const done = { id: "job-1", type: "zip-pdfs", status: "DONE", step: null, error:
 
 beforeEach(async () => {
   dataDir.path = await mkdtemp(path.join(tmpdir(), "dossier-downloads-"));
-  await mkdir(path.join(dataDir.path, "downloads"));
-  await writeFile(path.join(dataDir.path, "downloads", "abc-123.zip"), "PK zip");
-  vi.mocked(getSession).mockResolvedValue({ persistent: false, issuedAt: new Date(), expiresAt: new Date() });
+  await mkdir(path.join(dataDir.path, "accounts", TEST_USER_ID, "downloads"), { recursive: true });
+  await writeFile(path.join(dataDir.path, "accounts", TEST_USER_ID, "downloads", "abc-123.zip"), "PK zip");
+  vi.mocked(getSession).mockResolvedValue({ userId: "7e570000000000000000000a", sessionId: "0123456789abcdef", persistent: false, expiresAt: new Date() });
   vi.mocked(getJob).mockResolvedValue(done);
 });
 
@@ -34,7 +35,7 @@ describe("GET /api/downloads/[id] (E10-5)", () => {
     expect(response.headers.get("content-type")).toBe("application/zip");
     expect(response.headers.get("content-disposition")).toContain('filename="dossier-pdfs-2026-09-28.zip"');
     expect(await response.text()).toBe("PK zip");
-    expect(await readdir(path.join(dataDir.path, "downloads"))).toEqual([]);
+    expect(await readdir(path.join(dataDir.path, "accounts", TEST_USER_ID, "downloads"))).toEqual([]);
     expect((await get("job-1")).status).toBe(410);
   });
 

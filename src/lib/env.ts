@@ -4,11 +4,9 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isPasswordHash } from "@/lib/auth/password-hash";
 
 const SECRET_MIN_LENGTH = 32;
 const GENERATE_SECRET = "for example the output of `openssl rand -base64 32`";
-const HASH_PASSWORD = "Make one with `docker run --rm -it ghcr.io/aientech/dossier hash-password`";
 
 export const AI_PROVIDERS = ["local", "openai", "anthropic", "mistral", "lmstudio"] as const;
 export const JOB_SOURCE_NAMES = ["jsearch", "adzuna", "arbeitsagentur", "freehire", "off"] as const;
@@ -29,14 +27,12 @@ const optional = <T extends z.ZodType>(schema: T) =>
 
 const schema = z.object({
   // Never echo the value: it may be the password itself, set by mistake.
-  DOSSIER_PASSWORD: required(
-    "DOSSIER_PASSWORD",
-    `Set it to a hash of the password you want to sign in with. ${HASH_PASSWORD}.`,
-  ).pipe(
-    z.string().trim().refine(isPasswordHash, {
-      error: `DOSSIER_PASSWORD must be a hash of your password, not the password itself. ${HASH_PASSWORD} and set DOSSIER_PASSWORD to what it prints.`,
-    }),
-  ),
+  // Dossier's single-user password; Career Studio has accounts and ignores it.
+  DOSSIER_PASSWORD: optional(z.string()),
+  /** "open" (default) lets anyone create an account; "closed" allows none. */
+  CAREER_STUDIO_SIGNUPS: z.preprocess(unsetIfEmpty, z.enum(["open", "closed"]).default("open")),
+  /** When set, creating an account needs this code. */
+  CAREER_STUDIO_INVITE_CODE: optional(z.string().trim()),
   DOSSIER_SECRET: required(
     "DOSSIER_SECRET",
     `Set it to a random string of at least ${SECRET_MIN_LENGTH} characters, ${GENERATE_SECRET}.`,

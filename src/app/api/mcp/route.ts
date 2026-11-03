@@ -4,6 +4,7 @@ import { connectorSince, mcpUrl, SCOPE, verifyAccessToken } from "@/lib/connecto
 import { createDossierServer } from "@/lib/connector/tools";
 import { publicOrigin } from "@/lib/google/origin";
 import { logServerError } from "@/lib/log";
+import { runAsUser } from "@/lib/tenancy/context";
 
 // The Claude connector (#221): Dossier as a remote MCP server (Streamable
 // HTTP) at /api/mcp, for Claude's custom connectors. Each request gets a
@@ -26,13 +27,14 @@ function unauthorized(origin: string): Response {
 }
 
 async function handle(request: Request): Promise<Response> {
-  if (!(await connectorSince())) return new Response(null, { status: 404 });
   const origin = publicOrigin(request);
   const token = /^Bearer\s+(\S.*)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
   const access = await verifyAccessToken(token);
   if (!access) return unauthorized(origin);
+  // Each account turns its own connector on; the token says whose it is.
+  if (!(await runAsUser(access.userId, () => connectorSince()))) return new Response(null, { status: 404 });
   try {
-    return await handler.fetch(request, { authInfo: { token: token!, clientId: access.clientId, scopes: [SCOPE], extra: { origin } } });
+    return await runAsUser(access.userId, () => handler.fetch(request, { authInfo: { token: token!, clientId: access.clientId, scopes: [SCOPE], extra: { origin } } }));
   } catch (error) {
     logServerError(`MCP connector ${mcpUrl(origin)}`, error);
     return Response.json({ jsonrpc: "2.0", error: { code: -32603, message: "Dossier couldn't answer that." }, id: null }, { status: 500 });

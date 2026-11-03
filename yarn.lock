@@ -5008,7 +5008,7 @@ __metadata:
     node-html-parser: "npm:^9.0.5"
     ollama: "npm:^0.6.4"
     openai: "npm:^7.43.0"
-    pg: "npm:^8.23.1"
+    pg: "npm:^8"
     playwright-core: "npm:^1.64.1"
     prisma: "npm:^7.10.1"
     radix-ui: "npm:^1.8.1"
@@ -7768,6 +7768,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pg@npm:^8":
+  version: 8.23.1
+  resolution: "pg@npm:8.23.1"
+  dependencies:
+    pg-cloudflare: "npm:^1.4.1"
+    pg-connection-string: "npm:^2.14.1"
+    pg-pool: "npm:^3.14.0"
+    pg-protocol: "npm:^1.16.1"
+    pg-types: "npm:2.2.0"
+    pgpass: "npm:1.0.5"
+  peerDependencies:
+    pg-native: ">=3.0.1"
+  dependenciesMeta:
+    pg-cloudflare:
+      optional: true
+  peerDependenciesMeta:
+    pg-native:
+      optional: true
+  checksum: 10c0/084ce2bcd025705105d4d9a4c4438b178117acbaae5c766e3d3c9fb812cc55d826a212189e19937b8e3b0a8914a3c3e4ba78ad62af73890f37406a676c1f9e0c
+  languageName: node
+  linkType: hard
+
 "pg@npm:^8.16.3":
   version: 8.23.0
   resolution: "pg@npm:8.23.0"
@@ -7787,28 +7809,6 @@ __metadata:
     pg-native:
       optional: true
   checksum: 10c0/11ce12a71b4239588c18f078531c378d5bcdbcb9ea892e080a6e71f91aaece2b4b8fd93ee5777f94210f9258ff56161f8ed1a45050c32d295aaca037bba12ee8
-  languageName: node
-  linkType: hard
-
-"pg@npm:^8.23.1":
-  version: 8.23.1
-  resolution: "pg@npm:8.23.1"
-  dependencies:
-    pg-cloudflare: "npm:^1.4.1"
-    pg-connection-string: "npm:^2.14.1"
-    pg-pool: "npm:^3.14.0"
-    pg-protocol: "npm:^1.16.1"
-    pg-types: "npm:2.2.0"
-    pgpass: "npm:1.0.5"
-  peerDependencies:
-    pg-native: ">=3.0.1"
-  dependenciesMeta:
-    pg-cloudflare:
-      optional: true
-  peerDependenciesMeta:
-    pg-native:
-      optional: true
-  checksum: 10c0/084ce2bcd025705105d4d9a4c4438b178117acbaae5c766e3d3c9fb812cc55d826a212189e19937b8e3b0a8914a3c3e4ba78ad62af73890f37406a676c1f9e0c
   languageName: node
   linkType: hard
 

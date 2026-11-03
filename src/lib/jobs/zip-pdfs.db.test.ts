@@ -9,6 +9,7 @@ import { renderPdf } from "@/lib/pdf/render";
 import { createTestClient, resetDatabase } from "@/test/db";
 
 import { countTailoredDocuments, zipPdfsJob } from "./zip-pdfs";
+import { TEST_USER_ID } from "@/lib/tenancy/context";
 
 const db = vi.hoisted(() => ({ client: undefined as ReturnType<typeof createTestClient> | undefined }));
 vi.mock("@/lib/prisma", async () => {
@@ -52,7 +53,7 @@ describe("zipPdfsJob (E10-5)", () => {
     expect(renderPdf).toHaveBeenCalledWith("/print/resume/a1");
     expect(renderPdf).toHaveBeenCalledWith("/print/letter/a3");
 
-    const zip = unzipSync(await readFile(path.join(dataDir.path, "downloads", result.file)));
+    const zip = unzipSync(await readFile(path.join(dataDir.path, "accounts", TEST_USER_ID, "downloads", result.file)));
     expect(Object.keys(zip).sort()).toEqual([
       "Ledgerly/Jane Doe – Ledgerly – Cover letter.pdf",
       "Ledgerly/Jane Doe – Ledgerly – Resume (2).pdf",
@@ -70,7 +71,7 @@ describe("zipPdfsJob (E10-5)", () => {
     vi.useFakeTimers({ now: Date.now() + 2 * 60 * 60 * 1000, toFake: ["Date"] });
     try {
       const second = await zipPdfsJob.run({}, context);
-      expect(await readdir(path.join(dataDir.path, "downloads"))).toEqual([second.file]);
+      expect(await readdir(path.join(dataDir.path, "accounts", TEST_USER_ID, "downloads"))).toEqual([second.file]);
       expect(second.file).not.toBe(first.file);
     } finally {
       vi.useRealTimers();

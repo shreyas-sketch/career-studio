@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { addedRedirects, allowedRedirect, connectorSince, isClaudeRedirect, registerClient } from "@/lib/connector/oauth";
+import { allowedRedirect, isClaudeRedirect, registerClient } from "@/lib/connector/oauth";
 
 const registration = z.object({
   redirect_uris: z.array(z.string().max(2000)).min(1).max(10),
@@ -14,13 +14,14 @@ const registration = z.object({
  * redirects, so no other site can use a registration to get a code.
  */
 export async function POST(request: Request) {
-  if (!(await connectorSince())) return new Response(null, { status: 404 });
   const body = registration.safeParse(await request.json().catch(() => null));
   if (!body.success) return Response.json({ error: "invalid_client_metadata", error_description: "Send redirect_uris." }, { status: 400 });
-  const added = await addedRedirects();
-  if (body.data.redirect_uris.some((uri) => !allowedRedirect(uri, added))) {
+  // Registration is shared by every account, so other apps' https addresses
+  // are accepted here; signing in (src/app/oauth/authorize) then only allows
+  // them for an account that added them in its Settings → MCP connector.
+  if (body.data.redirect_uris.some((uri) => !allowedRedirect(uri) && !isHttpsUrl(uri))) {
     return Response.json(
-      { error: "invalid_redirect_uri", error_description: "Only Claude's callback addresses and those added in Dossier's Settings → MCP connector are allowed." },
+      { error: "invalid_redirect_uri", error_description: "Only Claude's callback addresses and https addresses that an account adds in Settings → MCP connector are allowed." },
       { status: 400 },
     );
   }
@@ -38,4 +39,12 @@ export async function POST(request: Request) {
     },
     { status: 201, headers: { "cache-control": "no-store" } },
   );
+}
+
+function isHttpsUrl(uri: string): boolean {
+  try {
+    return new URL(uri).protocol === "https:";
+  } catch {
+    return false;
+  }
 }

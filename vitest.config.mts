@@ -14,6 +14,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Tests serve stand-in AI servers on localhost (see guarded-fetch.ts).
+    env: { CAREER_STUDIO_ALLOW_PRIVATE_AI_URLS: "1" },
     // Leave room for the dev server and database on the same machine.
     maxWorkers: "50%",
     // `yarn test:coverage` (E11-1). The thresholds ratchet (decided 28

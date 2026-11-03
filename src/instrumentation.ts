@@ -5,10 +5,22 @@ export async function register() {
     const { checkEnvOnStartup } = await import("@/lib/env");
     checkEnvOnStartup();
 
+    // The shared accounts schema, then every account's own schema brought up
+    // to date with migrations added since it last ran (src/lib/tenancy).
+    const { ensureAccountsSchema } = await import("@/lib/accounts/db");
+    const { listAccountIds, provisionAccount } = await import("@/lib/accounts/users");
+    const { forEachUser } = await import("@/lib/tenancy/each-user");
+    const { logServerError } = await import("@/lib/log");
+    try {
+      await ensureAccountsSchema();
+      for (const id of await listAccountIds()) await provisionAccount(id).catch((error: unknown) => logServerError("provision", error));
+    } catch (error) {
+      logServerError("startup", error);
+    }
+
     // AI jobs left running by the previous process can't finish (E6-7).
     const { recoverInterruptedJobs } = await import("@/lib/jobs/runner");
-    const { logServerError } = await import("@/lib/log");
-    await recoverInterruptedJobs().catch((error: unknown) => logServerError("startup", error));
+    await forEachUser("startup", () => recoverInterruptedJobs());
 
     // Finished jobs, with what they were given and wrote, are deleted after a while.
     const { startJobSweep } = await import("@/lib/jobs/retention");
@@ -30,26 +42,8 @@ export async function register() {
     const { startStartupsSchedule } = await import("@/lib/startups/schedule");
     startStartupsSchedule();
 
-    // DOSSIER_JOBS_SOURCE=arbeitsagentur: the log says what that choice means (#223).
-    const { arbeitsagenturStartupNotice, loadJobSearchConfig } = await import("@/lib/job-search/config");
-    try {
-      const notice = arbeitsagenturStartupNotice(await loadJobSearchConfig());
-      if (notice) console.log(notice);
-    } catch (error) {
-      logServerError("job search", error);
-    }
-
-    // DOSSIER_TELEMETRY, when set, is the usage ping's answer on record (#172).
-    // Then the log says what the ping sends while it's on, or how to answer
-    // while nobody has.
-    const { recordEnvChoice, usagePingNotice } = await import("@/lib/usage-ping");
-    const { loadSettings } = await import("@/lib/settings-data");
-    try {
-      await recordEnvChoice();
-      const notice = usagePingNotice(await loadSettings());
-      if (notice) console.log(notice);
-    } catch (error) {
-      logServerError("usage ping", error);
-    }
+    // Expired sign-ins are cleared out daily.
+    const { sweepExpiredSessions } = await import("@/lib/auth/session");
+    setInterval(() => void sweepExpiredSessions().catch(() => {}), 24 * 60 * 60 * 1000).unref?.();
   }
 }

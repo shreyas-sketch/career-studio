@@ -20,6 +20,8 @@ import { GoogleError } from "./errors";
 import { currentHistoryId, getMessage, messagesSince, searchMessages, type ReadMail } from "./gmail";
 import { matchMail, worthSuggesting, type MatchableApplication } from "./matching";
 import { parseAddress, stripQuoted } from "./mime";
+import { forEachUser } from "@/lib/tenancy/each-user";
+import { requireUserId } from "@/lib/tenancy/context";
 
 // The inbox check (E15-3): new mail since the last check, matched to
 // applications, kept, and read by the AI. A plain timer in this process,
@@ -197,31 +199,35 @@ export async function readReply(emailId: string, signal?: AbortSignal): Promise<
   });
 }
 
-const globalForSync = globalThis as unknown as { inboxTimer?: ReturnType<typeof setTimeout>; inboxRunning?: boolean };
+const globalForSync = globalThis as unknown as { inboxTimer?: ReturnType<typeof setTimeout>; inboxRunning?: Set<string> };
+// Per account: one check at a time each (Career Studio has many accounts).
+const running = (globalForSync.inboxRunning ??= new Set<string>());
 
 /** One scheduled check: interviews changed in Google Calendar, then new mail while reading is on. */
 async function scheduledCheck(): Promise<void> {
-  if (globalForSync.inboxRunning) return;
+  const user = requireUserId();
+  if (running.has(user)) return;
   const [connection, settings] = await Promise.all([googleConnection(), loadSettings()]);
   if (connection.status !== "connected") return;
-  globalForSync.inboxRunning = true;
+  running.add(user);
   try {
     // Interviews moved or deleted in Google Calendar, whether or not mail is read.
     await pullInterviewEvents().catch((error) => logServerError("calendar check", error));
     if (connection.canRead && settings.gmailRead) await syncInbox();
   } finally {
-    globalForSync.inboxRunning = false;
+    running.delete(user);
   }
 }
 
 /** Runs a check now unless one is running; for "Check now". */
 export async function checkInboxNow(): Promise<SyncResult | null> {
-  if (globalForSync.inboxRunning) return null;
-  globalForSync.inboxRunning = true;
+  const user = requireUserId();
+  if (running.has(user)) return null;
+  running.add(user);
   try {
     return await syncInbox();
   } finally {
-    globalForSync.inboxRunning = false;
+    running.delete(user);
   }
 }
 
@@ -229,9 +235,11 @@ export async function checkInboxNow(): Promise<SyncResult | null> {
 export function startInboxSchedule(): void {
   if (globalForSync.inboxTimer) return;
   const schedule = async () => {
-    const minutes = (await loadSettings().catch(() => null))?.gmailInterval ?? 10;
+    // Every account's own interval would need a timer each; one shared
+    // 10-minute tick checks every connected account instead.
+    const minutes = 10;
     globalForSync.inboxTimer = setTimeout(() => {
-      void scheduledCheck()
+      void forEachUser("inbox check", () => scheduledCheck())
         .catch(() => {})
         .finally(() => void schedule());
     }, minutes * 60_000);

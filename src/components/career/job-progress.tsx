@@ -1,15 +1,17 @@
 "use client";
 
-import { AlertCircle, LoaderCircle, RotateCcw } from "lucide-react";
+import { AlertCircle, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { RobotHead } from "@/components/staff/robot";
 import { toastResult } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { useJob } from "@/hooks/use-job";
 import { cn } from "@/lib/cn";
 import { retry } from "@/lib/jobs/actions";
 import type { JobView } from "@/lib/jobs/runner";
+import { jobRole, STAFF } from "@/lib/staff/staff";
 
 /**
  * Follows an AI step running in the background: its current step while it
@@ -65,6 +67,7 @@ export function JobProgress({
     );
   }
 
+  const staff = jobRole(job.type)?.staff;
   return (
     <div
       role="status"
@@ -75,11 +78,13 @@ export function JobProgress({
         className,
       )}
     >
-      <span className="relative grid size-6 shrink-0 place-items-center">
-        <span aria-hidden="true" className="absolute inset-0 rounded-full bg-accent-soft motion-safe:animate-pulse-soft" />
-        <LoaderCircle size={15} aria-hidden="true" className="relative text-accent-text motion-safe:animate-spin" />
-      </span>
-      <span className="font-medium">{job.step ?? idleLabel}</span>
+      {staff ? (
+        <RobotHead id={staff} mood={job.status === "QUEUED" ? "waiting" : "working"} className="w-9" />
+      ) : (
+        <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-accent motion-safe:animate-pulse-soft" />
+      )}
+      {staff && <span className="font-display text-[14px] font-semibold">{STAFF[staff].title}</span>}
+      <span className={staff ? "text-muted" : "font-medium"}>{job.step ?? idleLabel}</span>
       {job.status === "QUEUED" && <span className="text-muted">Waiting for a free slot…</span>}
     </div>
   );

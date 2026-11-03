@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useStaff } from "@/components/staff/staff-provider";
 import { cn } from "@/lib/cn";
 import { isCurrent, NAV } from "@/lib/nav";
+import { STAFF, STAFF_IDS } from "@/lib/staff/staff";
 
 import { useSidebarCollapsed } from "./sidebar-frame";
 
@@ -12,6 +14,7 @@ import { useSidebarCollapsed } from "./sidebar-frame";
 export function NavLinks({ counts }: { counts?: Record<string, number> } = {}) {
   const pathname = usePathname();
   const collapsed = useSidebarCollapsed();
+  const { members } = useStaff();
   return (
     <nav aria-label="Main" className="flex flex-1 flex-col gap-1">
       {NAV.map(({ label, items }, index) => (
@@ -32,6 +35,7 @@ export function NavLinks({ counts }: { counts?: Record<string, number> } = {}) {
           {items.map((item) => {
             const { href, label, icon: Icon } = item;
             const active = isCurrent(item, pathname);
+            const worker = STAFF_IDS.find((id) => STAFF[id].href === href && members[id].status === "working");
             return (
               <Link
                 key={href}
@@ -47,6 +51,11 @@ export function NavLinks({ counts }: { counts?: Record<string, number> } = {}) {
               >
                 <Icon size={16} aria-hidden="true" className="shrink-0" />
                 <span className={cn(collapsed && "sr-only")}>{label}</span>
+                {worker && !counts?.[href] && (
+                  <span className={cn("ml-auto size-1.5 rounded-full bg-accent motion-safe:animate-pulse-soft", collapsed && "absolute ml-0 translate-x-2.5 -translate-y-2")}>
+                    <span className="sr-only">, working</span>
+                  </span>
+                )}
                 {counts?.[href] ? (
                   <span
                     className={cn(

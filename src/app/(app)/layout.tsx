@@ -1,10 +1,14 @@
 import { cookies } from "next/headers";
 import { after } from "next/server";
 
+import { RobotMaterials } from "@/components/staff/robot";
+import { StaffNotes } from "@/components/staff/staff-notes";
+import { StaffProvider } from "@/components/staff/staff-provider";
 import { countAgentQueue } from "@/lib/agent/view";
 import { verifySession } from "@/lib/auth/session";
 import { inboxCount } from "@/lib/google/inbox-data";
 import { loadProfileName } from "@/lib/profile-data";
+import { loadStaff } from "@/lib/staff/live";
 import { COLOR_SCHEME_COOKIE, parseColorScheme, parseSidebarCollapsed, SIDEBAR_COOKIE } from "@/lib/ui-preferences";
 import { rememberBrowserTimeZone, userTimeZone } from "@/lib/time-zone";
 import { findAccount } from "@/lib/accounts/users";
@@ -27,9 +31,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const [name, account, jar] = await Promise.all([loadProfileName(), findAccount(session.userId), cookies()]);
   const userName = name.trim() || account?.name || "New user";
   // Replies waiting for an answer or a link, on the Inbox item; the job agent's finds and drafts on its own (E16-6).
-  const [waiting, agent] = await Promise.all([inboxCount().catch(() => 0), countAgentQueue().catch(() => 0)]);
+  const [waiting, agent, staff] = await Promise.all([inboxCount().catch(() => 0), countAgentQueue().catch(() => 0), loadStaff().catch(() => undefined)]);
 
   return (
+    <StaffProvider initial={staff}>
+    <RobotMaterials />
     <div className="flex min-h-screen">
       <a
         href="#main"
@@ -56,6 +62,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
       </div>
+      <StaffNotes />
     </div>
+    </StaffProvider>
   );
 }

@@ -92,7 +92,7 @@ export function AnalysisView({ record, reference, jobId: initialJob, aiReady }: 
 
           <Card className="flex flex-col gap-4 motion-safe:animate-rise-in">
             <span className="text-label font-semibold tracking-wide text-accent-text uppercase">Suggested bid</span>
-            <span className="font-serif text-[34px] leading-none font-semibold tabular-nums">
+            <span className="font-display text-[34px] leading-none font-semibold tabular-nums">
               {usd(analysis.pricing.low)}–{usd(analysis.pricing.high)}
               <span className="ml-1 font-sans text-sm font-normal text-muted">{analysis.pricing.type === "hourly" ? "per hour" : "fixed"}</span>
             </span>

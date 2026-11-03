@@ -1,6 +1,15 @@
 # Bundled fonts
 
-All fonts are licensed under the SIL Open Font License 1.1; each folder has its `OFL.txt`.
+All fonts here are licensed under the SIL Open Font License 1.1, and each folder has its `OFL.txt`, except Switzer.
+
+## Switzer
+
+Career Studio's title font, by Indian Type Foundry, under the [ITF Free Font License](https://www.fontshare.com/licenses/itf-ffl). It allows self-hosting in our own app, for commercial use too, but it doesn't allow redistribution, modified files, or offering the font for other people to choose. So:
+
+- Its files are never committed. `scripts/fetch-switzer.mjs` downloads the official files from [Fontshare](https://www.fontshare.com/fonts/switzer) unchanged into the git-ignored `switzer` folder, and `yarn dev` and `yarn build` run it first.
+- It's for the interface only. Don't add it to the resume themes or the theme builder.
+
+## The rest
 
 | Folder | Family | Styles | Source file in [google/fonts](https://github.com/google/fonts) |
 | --- | --- | --- | --- |

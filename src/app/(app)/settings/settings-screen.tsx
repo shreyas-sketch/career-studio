@@ -51,7 +51,7 @@ export function SettingsScreen({ section, children }: { section: SettingsSection
 export function SettingsSectionIntro({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <h2 className="font-serif text-section">{title}</h2>
+      <h2 className="font-display text-section">{title}</h2>
       {children && <p className="text-sm text-pretty text-muted">{children}</p>}
     </div>
   );

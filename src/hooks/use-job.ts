@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { pokeStaff } from "@/components/staff/staff-provider";
 import type { JobView } from "@/lib/jobs/runner";
 
 const POLL_MS = 1500;
@@ -27,12 +28,14 @@ export function useJob<R = unknown>(
 
   useEffect(() => {
     if (!id) return;
+    pokeStaff();
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const update = (job: JobView<R>) => {
       if (stopped) return;
       setState({ id, job });
       listener.current?.(job);
+      if (finished(job)) pokeStaff();
     };
 
     const poll = async () => {

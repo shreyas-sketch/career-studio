@@ -41,21 +41,21 @@ describe("the dashboard (E9-7)", () => {
     vi.useFakeTimers({ now: new Date(2026, 8, 28, 9), toFake: ["Date"] });
     render(<Dashboard {...props} />);
     expect(screen.getByRole("heading", { level: 1, name: "Good morning, Jane" })).toBeInTheDocument();
-    expect(screen.getByText("You've sent 7 applications and heard back from 5. That's a solid run. Keep it going.")).toBeInTheDocument();
+    expect(screen.getByText("You've sent 7 applications and heard back from 5.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "+ New application" })).toHaveAttribute("href", "/new?fresh=1");
     expect(document.cookie).toMatch(/dossier-tz=/);
   });
 
   it("encourages before anything was sent", () => {
     render(<Dashboard {...props} figures={{ ...figures, sent: 0, heardBack: 0, heardBackPercent: null }} />);
-    expect(screen.getByText("Nothing sent yet. Your first application is only a paste away.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing sent yet.")).toBeInTheDocument();
   });
 
   it("says which period the summary covers (E9-8)", () => {
     const { rerender } = render(<Dashboard {...props} range="30d" />);
-    expect(screen.getByText("In the last 30 days you've sent 7 applications and heard back from 5. That's a solid run. Keep it going.")).toBeInTheDocument();
+    expect(screen.getByText("In the last 30 days you've sent 7 applications and heard back from 5.")).toBeInTheDocument();
     rerender(<Dashboard {...props} range="90d" figures={{ ...figures, sent: 0, heardBack: 0, heardBackPercent: null }} />);
-    expect(screen.getByText("Nothing sent in the last 90 days. Your next application is only a paste away.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing sent in the last 90 days.")).toBeInTheDocument();
   });
 
   it("shows the funnel with its figures and notes, in words", () => {
@@ -80,13 +80,13 @@ describe("the dashboard (E9-7)", () => {
     expect(accepted).toHaveClass("text-muted");
   });
 
-  it("lists what's worth a look, each opening its application", () => {
+  it("lists what's for review, each opening its application", () => {
     render(<Dashboard {...props} />);
-    const attention = screen.getByRole("region", { name: "Worth a look" });
+    const attention = screen.getByRole("region", { name: "For your review" });
     expect(within(attention).getByText("2 things")).toBeInTheDocument();
     const [offer] = within(attention).getAllByRole("link");
     expect(offer).toHaveAttribute("href", "/applications/oaken");
-    expect(offer).toHaveTextContent("Oaken Studio, Design Systems LeadAn offer is waiting on your decision.Review →");
+    expect(offer).toHaveTextContent("Oaken Studio, Design Systems LeadAn offer is waiting on your decision.Review");
   });
 
   it("flags an interview today or tomorrow (E9-9)", () => {
@@ -100,7 +100,7 @@ describe("the dashboard (E9-7)", () => {
       soon: true,
     };
     render(<Dashboard {...props} figures={{ ...figures, attention: [interview, ...figures.attention] }} />);
-    const [first, second] = within(screen.getByRole("region", { name: "Worth a look" })).getAllByRole("link");
+    const [first, second] = within(screen.getByRole("region", { name: "For your review" })).getAllByRole("link");
     expect(first).toHaveTextContent("Northstar Health, Lead Product DesignerSoonInterview tomorrow at 14:00.");
     expect(second).not.toHaveTextContent("Soon");
   });
@@ -108,7 +108,7 @@ describe("the dashboard (E9-7)", () => {
   it("sets how long without news before a follow-up is suggested (E9-9)", async () => {
     const user = userEvent.setup();
     render(<Dashboard {...props} quietDays={7} />);
-    const threshold = within(screen.getByRole("region", { name: "Worth a look" })).getByLabelText("Suggest a follow-up after");
+    const threshold = within(screen.getByRole("region", { name: "For your review" })).getByLabelText("Suggest a follow-up after");
     expect(threshold).toHaveValue("7");
     expect(within(threshold).getAllByRole("option").map((option) => option.textContent)).toEqual([
       "3 days",
@@ -124,6 +124,13 @@ describe("the dashboard (E9-7)", () => {
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
   });
 
+  it("says when the search analyst has found postings", () => {
+    render(<Dashboard {...props} postingsFound={3} />);
+    const review = screen.getByRole("region", { name: "For your review" });
+    expect(within(review).getByText("3 things")).toBeInTheDocument();
+    expect(within(review).getByRole("link", { name: /found 3 postings/ })).toHaveAttribute("href", "/agent");
+  });
+
   it("keeps a threshold that isn't one of the choices", () => {
     render(<Dashboard {...props} quietDays={8} />);
     expect(screen.getByLabelText("Suggest a follow-up after")).toHaveValue("8");
@@ -131,12 +138,12 @@ describe("the dashboard (E9-7)", () => {
 
   it("is all caught up when nothing needs attention", () => {
     render(<Dashboard {...props} figures={{ ...figures, attention: [] }} />);
-    expect(screen.getByText("All caught up. Nice.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing needs you right now.")).toBeInTheDocument();
   });
 
   it("welcomes a new user", () => {
     render(<Dashboard {...props} empty figures={{ ...figures, sent: 0 }} />);
-    expect(screen.getByRole("heading", { name: "Welcome to Dossier" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Start with your profile" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Fill in your profile" })).toHaveAttribute("href", "/profile");
     expect(screen.queryByRole("region", { name: "Your funnel" })).not.toBeInTheDocument();
   });
@@ -145,7 +152,7 @@ describe("the dashboard (E9-7)", () => {
     const calendar = <section aria-label="Calendar" />;
     const { rerender } = render(<Dashboard {...props} calendar={calendar} />);
     const region = screen.getByRole("region", { name: "Calendar" });
-    expect(screen.getByRole("region", { name: "Worth a look" }).compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("region", { name: "For your review" }).compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Not among the cards, which dim while another period loads.
     expect(screen.getByRole("region", { name: "Your funnel" }).parentElement!.contains(region)).toBe(false);
     // A new user has the calendar too.

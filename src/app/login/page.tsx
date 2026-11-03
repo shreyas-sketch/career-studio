@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { BrandMark } from "@/components/brand-mark";
+import { SignInWall } from "@/components/staff/sign-in-wall";
 import { getSession } from "@/lib/auth/session";
 
 import { LoginForm } from "./login-form";
@@ -14,26 +15,21 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { next } = await searchParams;
 
   return (
-    // The form on the panel's colour, a warm wash on the right.
+    // The form on the panel's colour, the petrol wall beside it.
     <main className="grid min-h-screen bg-surface min-[960px]:grid-cols-2">
       <div className="flex items-center justify-center px-8 py-12">
       <div className="flex w-full max-w-[400px] flex-col gap-8">
         <div className="flex flex-col items-start gap-2">
           <BrandMark className="size-10" />
           <div className="flex flex-col">
-            <div className="font-serif text-[30px] font-medium tracking-[-0.01em]">Career Studio</div>
+            <div className="font-display text-[26px] font-semibold tracking-[-0.02em]">Career Studio</div>
             <div className="text-sm text-muted">Jobs, interviews, freelancing and skills, in one place</div>
           </div>
         </div>
         <LoginForm next={typeof next === "string" ? next : undefined} />
       </div>
       </div>
-      <div
-        aria-hidden="true"
-        className="hidden bg-[linear-gradient(to_left,color-mix(in_srgb,var(--color-ink)_9%,transparent)_0%,transparent_65%)] min-[960px]:grid min-[960px]:place-items-center"
-      >
-        <BrandMark className="size-40 opacity-90 shadow-dialog rounded-[36px]" />
-      </div>
+      <SignInWall />
     </main>
   );
 }

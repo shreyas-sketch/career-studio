@@ -36,7 +36,7 @@ export function Section({ title, description, actions, children, className }: { 
     <section className={cn("flex flex-col gap-4", className)}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h2 className="font-serif text-section">{title}</h2>
+          <h2 className="font-display text-section">{title}</h2>
           {description && <p className="max-w-[640px] text-sm text-pretty text-muted">{description}</p>}
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
@@ -51,7 +51,7 @@ export function EmptyState({ icon, title, children, action }: { icon: ReactNode;
   return (
     <div className="flex flex-col items-start gap-3 rounded-panel border border-dashed border-line-strong px-6 py-8 motion-safe:animate-rise-in">
       <span className="grid size-10 place-items-center rounded-full bg-accent-soft text-accent-text">{icon}</span>
-      <h3 className="font-serif text-xl">{title}</h3>
+      <h3 className="font-display text-xl font-medium">{title}</h3>
       <div className="max-w-[560px] text-sm text-pretty text-muted">{children}</div>
       {action && <div className="mt-1">{action}</div>}
     </div>

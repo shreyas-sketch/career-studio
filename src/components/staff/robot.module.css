@@ -1,0 +1,363 @@
+/* The staff's robots. Everything that shows their state lives here, so a state
+   reads the same at every size. Moods come from real jobs (see StaffMood). */
+
+@property --arm {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+
+.robot {
+  --gx: 0;
+  --gy: 0;
+  --arm: 0deg;
+  overflow: visible;
+  display: block;
+}
+
+/* The parts turn about fixed points in the drawing. */
+.head,
+.body,
+.arm,
+.armOther,
+.tool {
+  transform-box: view-box;
+}
+.head {
+  transform-origin: 100px 104px;
+  transform: rotate(calc(var(--gx) * 2.5deg));
+  transition: transform 300ms ease-out;
+}
+.body {
+  transform-origin: 100px 170px;
+}
+.arm {
+  transform-origin: 146px 130px;
+  transform: rotate(var(--arm));
+  transition: --arm 450ms cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+.armOther {
+  transform-origin: 54px 130px;
+}
+.tool {
+  transform-origin: 166px 194px;
+  transform: rotate(calc(var(--arm) * -1));
+  transition: --arm 450ms cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+
+/* The microphone's sound, only while the coach is listening. */
+.soundA,
+.soundB {
+  opacity: 0;
+  transition: opacity 300ms;
+}
+.robot[data-mood="working"] .soundA,
+.robot[data-mood="working"] .soundB {
+  opacity: 0.9;
+}
+
+/* The eyes follow the pointer, within the visor. */
+.gaze {
+  transform: translate(calc(var(--gx) * 5px), calc(var(--gy) * 4px));
+  transition: transform 220ms ease-out;
+}
+.eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 220ms ease-out, fill 300ms;
+}
+.eyesGlad,
+.mouthFocus,
+.mouthWorry,
+.mouthGlad,
+.scan,
+.glowWork,
+.glowStop,
+.glowDone,
+.pool {
+  opacity: 0;
+}
+.glowWork,
+.glowStop,
+.glowDone,
+.pool,
+.halo {
+  transition: opacity 400ms;
+}
+.halo {
+  opacity: 0.55;
+}
+.lift {
+  opacity: 0.55;
+}
+.mouthCalm,
+.mouthFocus,
+.mouthWorry,
+.mouthGlad,
+.eyesOpen,
+.eyesGlad {
+  transition: opacity 180ms;
+}
+
+.lamp {
+  fill: #5c6a86;
+  transition: fill 300ms;
+}
+
+/* Working: raises its tool, eyes narrow and on the work, the lamp lit. */
+.robot[data-mood="working"] {
+  --arm: -58deg;
+  --gx: 0.75;
+  --gy: 0.35;
+}
+.robot[data-mood="working"] .eye {
+  transform: scaleY(0.62);
+}
+.robot[data-mood="working"] .mouthCalm {
+  opacity: 0;
+}
+.robot[data-mood="working"] .mouthFocus {
+  opacity: 1;
+}
+.robot[data-mood="working"] .lamp {
+  fill: #f2c55c;
+}
+.robot[data-mood="working"] .glowWork,
+.robot[data-mood="working"] .pool,
+.robot[data-mood="working"] .halo {
+  opacity: 0.9;
+}
+
+/* Waiting for a free slot: tool half raised, looking up. */
+.robot[data-mood="waiting"] {
+  --arm: -28deg;
+  --gx: 0;
+  --gy: -0.7;
+}
+.robot[data-mood="waiting"] .lamp {
+  fill: #b6c2da;
+}
+
+/* Stopped: its lamp and eyes say so, and it looks out at the user. */
+.robot[data-mood="stuck"] .eye {
+  fill: #f6b9a8;
+  transform: scaleY(0.72);
+}
+.robot[data-mood="stuck"] .mouthCalm {
+  opacity: 0;
+}
+.robot[data-mood="stuck"] .mouthWorry {
+  opacity: 1;
+}
+.robot[data-mood="stuck"] .lamp {
+  fill: #f07f63;
+}
+.robot[data-mood="stuck"] .glowStop {
+  opacity: 0.9;
+}
+.robot[data-mood="stuck"] .halo {
+  opacity: 0;
+}
+
+/* Just finished: a brief, real moment of satisfaction. */
+.robot[data-mood="done"] {
+  --arm: -128deg;
+}
+.robot[data-mood="done"] .eyesOpen,
+.robot[data-mood="done"] .mouthCalm {
+  opacity: 0;
+}
+.robot[data-mood="done"] .eyesGlad,
+.robot[data-mood="done"] .mouthGlad {
+  opacity: 1;
+}
+.robot[data-mood="done"] .lamp {
+  fill: #7fe0ae;
+}
+.robot[data-mood="done"] .glowDone {
+  opacity: 0.9;
+}
+
+/* Someone's reaching for it. */
+.robot[data-attentive="true"]:not([data-mood="working"], [data-mood="done"]) {
+  --arm: -128deg;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Hanging in the air: slow and slight while idle, a little livelier at work. */
+  .head {
+    animation: head-hover 5.2s ease-in-out infinite;
+    animation-delay: var(--seed, 0s);
+  }
+  .body {
+    animation: body-hover 5.2s ease-in-out infinite;
+    animation-delay: calc(var(--seed, 0s) - 0.5s);
+  }
+  .eye {
+    animation: blink 6.4s linear infinite;
+    animation-delay: calc(var(--seed, 0s) * 2.3);
+  }
+  .robot[data-mood="working"] .head,
+  .robot[data-mood="working"] .body {
+    animation-duration: 2.6s;
+  }
+  .robot[data-mood="working"] .eye {
+    animation: none;
+  }
+  .robot[data-mood="working"] .scan {
+    opacity: 1;
+    animation: scan 2.2s ease-in-out infinite;
+  }
+  .robot[data-mood="working"] .lamp,
+  .robot[data-mood="working"] .glowWork {
+    animation: lamp 1.3s ease-in-out infinite;
+  }
+  .lift {
+    animation: lift 5.2s ease-in-out infinite;
+    animation-delay: var(--seed, 0s);
+  }
+  .robot[data-mood="working"] .armMotion {
+    animation: arm-work 1.6s ease-in-out infinite;
+  }
+  .robot[data-attentive="true"]:not([data-mood="working"]) .armMotion,
+  .robot[data-mood="done"] .armMotion {
+    animation: arm-wave 0.9s ease-in-out infinite;
+  }
+  .robot[data-mood="stuck"] .head {
+    animation: none;
+    transform: rotate(-5deg);
+  }
+
+  /* Each tool at its own trade, only while its robot is working. */
+  .robot[data-mood="working"] .sweep {
+    animation: sweep 2s ease-in-out infinite;
+  }
+  .robot[data-mood="working"] .writeA,
+  .robot[data-mood="working"] .writeB,
+  .robot[data-mood="working"] .writeC,
+  .robot[data-mood="working"] .writeD {
+    stroke-dasharray: 24;
+    animation: write 3s linear infinite;
+  }
+  .robot[data-mood="working"] .writeB {
+    animation-delay: 0.7s;
+  }
+  .robot[data-mood="working"] .writeC {
+    animation-delay: 1.4s;
+  }
+  .robot[data-mood="working"] .writeD {
+    animation-delay: 2.1s;
+  }
+  .robot[data-mood="working"] .soundA,
+  .robot[data-mood="working"] .soundB {
+    animation: sound 1.4s ease-in-out infinite;
+  }
+  .robot[data-mood="working"] .soundB {
+    animation-delay: 0.22s;
+  }
+  .robot[data-mood="working"] .tickA,
+  .robot[data-mood="working"] .tickB {
+    stroke-dasharray: 16;
+    animation: tick 3.2s ease-out infinite;
+  }
+  .robot[data-mood="working"] .tickB {
+    animation-delay: 1.2s;
+  }
+  .robot[data-mood="working"] .needle {
+    animation: needle 3.4s ease-in-out infinite;
+  }
+  .robot[data-mood="working"] .beam {
+    animation: weigh 2.8s ease-in-out infinite;
+  }
+  .robot[data-mood="working"] .barA,
+  .robot[data-mood="working"] .barB,
+  .robot[data-mood="working"] .barC {
+    animation: grow 2.4s ease-in-out infinite;
+  }
+  .robot[data-mood="working"] .barB {
+    animation-delay: 0.25s;
+  }
+  .robot[data-mood="working"] .barC {
+    animation-delay: 0.5s;
+  }
+}
+
+.armMotion {
+  transform-box: view-box;
+  transform-origin: 146px 130px;
+}
+.needle,
+.beam,
+.barA,
+.barB,
+.barC {
+  transform-box: fill-box;
+}
+.needle,
+.beam {
+  transform-origin: center;
+}
+.barA,
+.barB,
+.barC {
+  transform-origin: bottom;
+}
+
+@keyframes head-hover {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3px; }
+}
+@keyframes body-hover {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -2px; }
+}
+@keyframes blink {
+  0%, 95.5%, 100% { scale: 1 1; }
+  97.5% { scale: 1 0.08; }
+}
+@keyframes lift {
+  50% { opacity: 0.3; }
+}
+@keyframes scan {
+  0% { transform: translateX(-70px); }
+  100% { transform: translateX(70px); }
+}
+@keyframes lamp {
+  50% { opacity: 0.45; }
+}
+@keyframes arm-work {
+  0%, 100% { rotate: -3deg; }
+  50% { rotate: 4deg; }
+}
+@keyframes arm-wave {
+  0%, 100% { rotate: -9deg; }
+  50% { rotate: 9deg; }
+}
+@keyframes sweep {
+  0%, 100% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+}
+@keyframes write {
+  0% { stroke-dashoffset: 24; }
+  45%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes sound {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.95; }
+}
+@keyframes tick {
+  0% { stroke-dashoffset: 16; }
+  35%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes needle {
+  0%, 100% { transform: rotate(-35deg); }
+  50% { transform: rotate(55deg); }
+}
+@keyframes weigh {
+  0%, 100% { transform: rotate(-9deg); }
+  50% { transform: rotate(9deg); }
+}
+@keyframes grow {
+  0%, 100% { transform: scaleY(0.55); }
+  50% { transform: scaleY(1); }
+}

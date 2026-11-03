@@ -110,7 +110,7 @@ export function ProfileEditor({ initial, section, order }: { initial: ProfileDat
 
         <div className="flex max-w-[760px] min-w-0 flex-[999_1_420px] flex-col gap-6">
           <div className="flex flex-col gap-1.5">
-            <h2 className="font-serif text-section">{current.title}</h2>
+            <h2 className="font-display text-section">{current.title}</h2>
             <p className="text-sm text-pretty text-muted">
               {current.optional && "Optional. "}
               {current.hint}

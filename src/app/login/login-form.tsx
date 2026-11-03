@@ -62,7 +62,7 @@ export function LoginForm({ next, mode = "signin", inviteRequired = false }: { n
     <form action={formAction} onSubmit={submit} noValidate className="flex flex-col gap-5">
       {next && <input type="hidden" name="next" value={next} />}
       <div className="flex flex-col gap-1.5">
-        <h1 className="font-serif text-[28px] leading-[1.15] tracking-[-0.01em]">
+        <h1 className="font-display text-[26px] leading-[1.15] font-medium tracking-[-0.022em]">
           {signup ? "Create your studio" : "Welcome back"}
         </h1>
         <p className="text-sm text-muted">

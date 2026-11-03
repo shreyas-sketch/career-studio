@@ -2,6 +2,7 @@ import { LogOut, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { BrandMark } from "@/components/brand-mark";
+import { AtWork } from "@/components/staff/at-work";
 import { signOut } from "@/lib/auth/actions";
 import type { ColorScheme } from "@/lib/ui-preferences";
 
@@ -44,7 +45,7 @@ export function Sidebar({
         <>
           <BrandMark />
           <div className="flex min-w-0 flex-col group-data-collapsed/sidebar:hidden">
-            <span className="font-serif text-[22px] leading-none font-semibold tracking-[-0.02em]">Career Studio</span>
+            <span className="font-display text-[18px] leading-none font-semibold tracking-[-0.018em]">Career Studio</span>
             <span className="truncate text-xs text-muted">Work, interviews, skills</span>
           </div>
         </>
@@ -61,6 +62,8 @@ export function Sidebar({
           {/* Hidden while collapsed, but still the link's name. */}
           <span className="group-data-collapsed/sidebar:sr-only">New application</span>
         </Link>
+
+        <AtWork />
 
         <NavLinks counts={counts} />
       </div>

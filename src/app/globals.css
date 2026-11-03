@@ -13,61 +13,64 @@
    * meets WCAG AA (4.5:1) on every surface in both schemes.
    */
 
-  /* Surfaces: a beige shell, like the sidebar, around the screen's panel. */
-  --color-paper: light-dark(#e9ebef, #0b101b); /* shell around the panel, side columns, disabled fields */
-  --color-sidebar: light-dark(#e9ebef, #0b101b);
-  --color-surface: light-dark(#f6f6f3, #111827); /* the panel each screen sits in */
-  --color-card: light-dark(#ffffff, #172033);
-  --color-canvas: light-dark(#e3e6ec, #090d16); /* behind document previews */
-  --color-input: light-dark(#ffffff, #0f1626); /* inputs */
+  /* Surfaces: cool stone by day, deep petrol at night. */
+  --color-paper: light-dark(#e3e7e4, #0d2227); /* shell around the panel, side columns, disabled fields */
+  --color-sidebar: light-dark(#e3e7e4, #0d2227);
+  --color-surface: light-dark(#f3f5f3, #122c32); /* the panel each screen sits in */
+  --color-card: light-dark(#ffffff, #18363d);
+  --color-canvas: light-dark(#dce1de, #0a1c20); /* behind document previews */
+  --color-input: light-dark(#ffffff, #0f272c); /* inputs */
 
   /* Text */
-  --color-ink: light-dark(#121a2b, #eef1f7);
-  --color-document: light-dark(#26304a, #dde3ee); /* posting text, set like a document */
+  --color-ink: light-dark(#132326, #eef2ef);
+  --color-document: light-dark(#263a3d, #dce4e1); /* posting text, set like a document */
   /* Secondary text: hints, labels, metadata. It passes on every surface
      and on the hover tints, but not on a selected item over the shell
      (4.3:1 in the light scheme): use ink there. */
-  --color-muted: light-dark(#5a6377, #a3adc2);
+  --color-muted: light-dark(#4c5c5f, #a9bbbc);
   /* Disabled and decorative only: never for text people need to read. */
-  --color-faint: light-dark(#9aa2b4, #5d6880);
+  --color-faint: light-dark(#98a5a7, #607a7e);
 
   /* Primary actions: near-black, and near-white in the dark scheme, with
      on-primary text at 4.5:1 or more. primary-text is for text and icons
      marking a choice, e.g. a selected chip's label. */
-  --color-primary: light-dark(#16233f, #f0c56b);
-  --color-primary-hover: light-dark(#24365c, #f7d58e);
-  --color-on-primary: light-dark(#ffffff, #10172a);
-  --color-primary-text: light-dark(#16233f, #f0c56b);
+  --color-primary: light-dark(#12424a, #e3bc6e);
+  --color-primary-hover: light-dark(#0c343b, #edcd8c);
+  --color-on-primary: light-dark(#ffffff, #0f262b);
+  --color-primary-text: light-dark(#12424a, #e3bc6e);
   /* Focus rings: 3:1 against every surface. */
-  --color-focus: light-dark(#16233f, #f0c56b);
+  --color-focus: light-dark(#12424a, #e3bc6e);
 
-  /* Career Studio's signal colour: amber, for what's live, next or achieved.
+  /* Career Studio's signal colour: brass, for what's live, next or achieved.
      accent-text meets 4.5:1 on every surface; accent-soft is a tint behind it. */
-  --color-accent: light-dark(#c98a1c, #f0c56b);
-  --color-accent-text: light-dark(#8a5a07, #f4cf80);
-  --color-accent-soft: light-dark(rgb(201 138 28 / 0.12), rgb(240 197 107 / 0.12));
+  --color-accent: light-dark(#a9791b, #e3bc6e);
+  --color-accent-text: light-dark(#7a570b, #ebcb8a);
+  --color-accent-soft: light-dark(rgb(169 121 27 / 0.12), rgb(227 188 110 / 0.13));
   --color-teal: light-dark(#0f766e, #5eead4);
   --color-teal-soft: light-dark(rgb(15 118 110 / 0.1), rgb(94 234 212 / 0.1));
 
+  /* A stopped job's words on the petrol wall (.signal-wall): the same in both schemes. */
+  --color-signal-fault: #f0a48f;
+
   /* Toasts and tooltips: a dark chip, a little raised in the dark scheme. */
-  --color-inverse: light-dark(#16233f, #26324b);
-  --color-on-inverse: light-dark(#ffffff, #eef1f7);
+  --color-inverse: light-dark(#132326, #234750);
+  --color-on-inverse: light-dark(#ffffff, #eef2ef);
 
   /* Lines */
-  --color-line: light-dark(rgb(18 26 43 / 0.08), rgb(238 241 247 / 0.07)); /* dividers */
-  --color-line-card: light-dark(rgb(18 26 43 / 0.1), rgb(238 241 247 / 0.1));
-  --color-line-field: light-dark(rgb(18 26 43 / 0.14), rgb(238 241 247 / 0.14)); /* chips and other controls named by their text */
+  --color-line: light-dark(rgb(19 35 38 / 0.08), rgb(238 242 239 / 0.07)); /* dividers */
+  --color-line-card: light-dark(rgb(19 35 38 / 0.1), rgb(238 242 239 / 0.1));
+  --color-line-field: light-dark(rgb(19 35 38 / 0.14), rgb(238 242 239 / 0.14)); /* chips and other controls named by their text */
   /* Text fields, whose border is what shows they're fields: 3:1 on every surface (E11-3, WCAG 1.4.11). */
-  --color-line-input: light-dark(rgb(18 26 43 / 0.5), rgb(238 241 247 / 0.42));
-  --color-line-control: light-dark(rgb(18 26 43 / 0.16), rgb(238 241 247 / 0.14)); /* secondary buttons */
-  --color-line-popover: light-dark(rgb(18 26 43 / 0.12), rgb(238 241 247 / 0.12)); /* menus */
-  --color-line-strong: light-dark(rgb(18 26 43 / 0.2), rgb(238 241 247 / 0.24)); /* upcoming steps */
+  --color-line-input: light-dark(rgb(19 35 38 / 0.5), rgb(238 242 239 / 0.42));
+  --color-line-control: light-dark(rgb(19 35 38 / 0.16), rgb(238 242 239 / 0.14)); /* secondary buttons */
+  --color-line-popover: light-dark(rgb(19 35 38 / 0.12), rgb(238 242 239 / 0.12)); /* menus */
+  --color-line-strong: light-dark(rgb(19 35 38 / 0.2), rgb(238 242 239 / 0.24)); /* upcoming steps */
 
   /* Tints for hover, selection and tracks */
-  --color-hover: light-dark(rgb(18 26 43 / 0.05), rgb(238 241 247 / 0.07));
-  --color-selected: light-dark(rgb(18 26 43 / 0.07), rgb(238 241 247 / 0.1));
-  --color-track: light-dark(rgb(18 26 43 / 0.07), rgb(238 241 247 / 0.08));
-  --color-toggle-off: light-dark(rgb(18 26 43 / 0.5), rgb(238 241 247 / 0.42)); /* 3:1, like text fields */
+  --color-hover: light-dark(rgb(19 35 38 / 0.05), rgb(238 242 239 / 0.07));
+  --color-selected: light-dark(rgb(19 35 38 / 0.07), rgb(238 242 239 / 0.1));
+  --color-track: light-dark(rgb(19 35 38 / 0.07), rgb(238 242 239 / 0.08));
+  --color-toggle-off: light-dark(rgb(19 35 38 / 0.5), rgb(238 242 239 / 0.42)); /* 3:1, like text fields */
 
   /* Feedback. error and danger are for text; danger-fill is behind white text. */
   --color-danger: light-dark(#9a4a3a, #f87171); /* remove / destructive text */
@@ -96,20 +99,20 @@
   --color-status-declined: light-dark(#6f6a62, #958f86);
 
   /* Radii */
-  --radius-control: 8px; /* buttons, inputs, nav items */
-  --radius-toast: 12px;
-  --radius-card: 12px;
+  --radius-control: 6px; /* buttons, inputs, nav items */
+  --radius-toast: 8px;
+  --radius-card: 8px;
   --radius-panel: 12px; /* large cards and panels */
-  --radius-dialog: 16px;
+  --radius-dialog: 14px;
 
   /* Shadows: warm in the light scheme, deeper in the dark one, where a faint one wouldn't show. */
-  --shadow-page: 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 40px light-dark(rgb(18 26 43 / 0.1), rgb(0 0 0 / 0.5));
-  --shadow-dialog: 0 8px 32px light-dark(rgb(18 26 43 / 0.16), rgb(0 0 0 / 0.5));
+  --shadow-page: 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 40px light-dark(rgb(19 35 38 / 0.1), rgb(0 0 0 / 0.5));
+  --shadow-dialog: 0 8px 32px light-dark(rgb(19 35 38 / 0.16), rgb(0 0 0 / 0.5));
   --shadow-raised: 0 1px 2px light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.5)); /* selected segment */
-  --shadow-control: 0 1px 3px light-dark(rgb(18 26 43 / 0.08), rgb(0 0 0 / 0.3)); /* fields and secondary buttons */
-  --shadow-cta: 0 1px 3px light-dark(rgb(18 26 43 / 0.14), rgb(0 0 0 / 0.4));
+  --shadow-control: 0 1px 3px light-dark(rgb(19 35 38 / 0.08), rgb(0 0 0 / 0.3)); /* fields and secondary buttons */
+  --shadow-cta: 0 1px 3px light-dark(rgb(19 35 38 / 0.14), rgb(0 0 0 / 0.4));
   --shadow-knob: 0 1px 2px rgb(0 0 0 / 0.2);
-  --shadow-menu: 0 8px 32px light-dark(rgb(18 26 43 / 0.16), rgb(0 0 0 / 0.55));
+  --shadow-menu: 0 8px 32px light-dark(rgb(19 35 38 / 0.16), rgb(0 0 0 / 0.55));
   --shadow-toolbar: 0 4px 14px light-dark(rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.5));
   --shadow-toast: 0 8px 32px light-dark(rgb(0 0 0 / 0.18), rgb(0 0 0 / 0.55));
 
@@ -125,14 +128,14 @@
   --text-field--line-height: 1.4;
   --text-lead: 15px; /* page introductions */
   --text-lead--line-height: 1.55;
-  --text-section: 24px; /* section titles (serif) */
-  --text-section--line-height: 1.2;
-  --text-section--letter-spacing: -0.01em;
-  --text-section--font-weight: 500;
-  --text-title: 40px; /* page titles (serif) */
-  --text-title--line-height: 1.1;
-  --text-title--letter-spacing: -0.015em;
-  --text-title--font-weight: 400;
+  --text-section: 20px; /* section titles */
+  --text-section--line-height: 1.25;
+  --text-section--letter-spacing: -0.015em;
+  --text-section--font-weight: 600;
+  --text-title: 32px; /* page titles */
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.024em;
+  --text-title--font-weight: 500;
 
   /* Motion. Use with motion-safe: so reduced-motion users don't get it. */
   --animate-toast-in: toast-in 160ms ease-out;
@@ -168,6 +171,21 @@
   }
 }
 
+/* Today's instrument panel: deep petrol whatever the scheme, so everything in
+   it takes its colours from here. All text meets 7:1 on this wall. */
+.signal-wall {
+  color-scheme: dark;
+  --color-surface: #0f2f35;
+  --color-ink: #f1f4f0;
+  --color-muted: #a8bdbd;
+  --color-primary: #e6c077;
+  --color-primary-hover: #efd093;
+  --color-on-primary: #0f262b;
+  --color-focus: #e6c077;
+  --color-line-card: rgb(241 244 240 / 0.12);
+  background-image: radial-gradient(90% 75% at 50% -5%, rgb(150 205 215 / 0.13), transparent 70%);
+}
+
 /* Thin scrollbars in the app's colours, for areas that scroll on their own
    inside the page, such as the board's lanes. Browsers without
    scrollbar-color (Safari) keep their own, which are thin already. */
@@ -182,9 +200,9 @@
 
 /* Fonts come from next/font (src/fonts), which sets the --typeface-* variables at runtime. */
 @theme inline {
-  /* Career Studio: IBM Plex Sans for the interface, Fraunces for titles. */
+  /* Career Studio: Switzer for titles, IBM Plex Sans for the interface. */
   --font-sans: var(--typeface-plex-sans);
-  --font-serif: var(--typeface-fraunces);
+  --font-display: var(--typeface-switzer), var(--typeface-plex-sans);
   --font-mono: var(--typeface-plex-mono);
   --font-plex-sans: var(--typeface-plex-sans);
   --font-garamond: var(--typeface-eb-garamond);

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { PageHeader } from "@/components/page-header";
 import { buttonClassName } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
 import type { ApplicationStatus } from "@/generated/prisma/enums";
@@ -14,6 +13,7 @@ import { FunnelChart } from "./funnel-chart";
 import { Greeting } from "./greeting";
 import { PeriodFilter, PeriodScoped } from "./period-filter";
 import { QuietDays } from "./quiet-days";
+import { StaffWall } from "./staff-wall";
 
 const card = "flex flex-col rounded-panel border border-line-card bg-card";
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
@@ -27,6 +27,7 @@ export function Dashboard({
   quietDays = DEFAULT_QUIET_DAYS,
   empty,
   calendar,
+  postingsFound = 0,
 }: {
   figures: DashboardFigures;
   firstName: string;
@@ -39,22 +40,24 @@ export function Dashboard({
   empty: boolean;
   /** The calendar (E15-6), which the time filter doesn't scope. */
   calendar?: ReactNode;
+  /** Postings the job agent found, waiting for a look. */
+  postingsFound?: number;
 }) {
   const { sent, heardBack } = figures;
   // The summary follows the time filter, so it says which period it covers.
   const within = range === "all" ? null : DASHBOARD_PERIODS.find((entry) => entry.value === range)?.label.toLowerCase();
   return (
     <>
-      <PageHeader
+      <StaffWall
         title={<Greeting name={firstName} serverPeriod={period} />}
-        description={
+        standing={
           sent > 0
-            ? `${within ? `In the ${within} you've` : "You've"} sent ${plural(sent, "application", "applications")} and heard back from ${heardBack}. That's a solid run. Keep it going.`
+            ? `${within ? `In the ${within} you've` : "You've"} sent ${plural(sent, "application", "applications")} and heard back from ${heardBack}.`
             : within
-              ? `Nothing sent in the ${within}. Your next application is only a paste away.`
-              : "Nothing sent yet. Your first application is only a paste away."
+              ? `Nothing sent in the ${within}.`
+              : "Nothing sent yet."
         }
-        actions={
+        action={
           <Link href="/new?fresh=1" className={buttonClassName("primary", "md", "hover:text-on-primary")}>
             + New application
           </Link>
@@ -66,16 +69,18 @@ export function Dashboard({
           <Welcome />
         </Columns>
       ) : (
+        <>
+        <ForReview items={figures.attention} quietDays={quietDays} postingsFound={postingsFound} />
         <PeriodFilter period={range}>
           <Columns calendar={calendar}>
             <PeriodScoped className="grid max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-start gap-5">
               <Funnel figures={figures} />
               <ActivityChart weeks={figures.weeks} />
               <WhereThingsStand byStatus={figures.byStatus} />
-              <WorthALook items={figures.attention} quietDays={quietDays} />
             </PeriodScoped>
           </Columns>
         </PeriodFilter>
+        </>
       )}
     </>
   );
@@ -87,7 +92,7 @@ export function Dashboard({
  */
 function Columns({ calendar, children }: { calendar?: ReactNode; children: ReactNode }) {
   return (
-    <div className="@container px-10 pb-[72px]">
+    <div className="@container px-10 pb-[72px] max-sm:px-4">
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 @min-[1240px]:grid-cols-[minmax(0,1200px)_400px]">
         {children}
         {calendar && <div className="min-w-0 @min-[780px]:max-w-[calc(50%-10px)] @min-[1240px]:max-w-none">{calendar}</div>}
@@ -103,7 +108,7 @@ function Funnel({ figures }: { figures: DashboardFigures }) {
     <section aria-labelledby="funnel-heading" className={`${card} col-span-full gap-6 p-7`}>
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h2 id="funnel-heading" className="font-serif text-section">
+          <h2 id="funnel-heading" className="font-display text-section">
             Your funnel
           </h2>
           <p className="text-control text-muted">How far each application you&apos;ve sent has made it, and where the ones that stopped are now.</p>
@@ -123,7 +128,7 @@ function Figure({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col-reverse gap-0.5">
       <dt className="text-label text-muted">{label}</dt>
-      <dd className="font-serif text-[32px] leading-none tabular-nums">{value}</dd>
+      <dd className="font-display text-[32px] leading-none tabular-nums">{value}</dd>
     </div>
   );
 }
@@ -160,22 +165,34 @@ function WhereThingsStand({ byStatus }: { byStatus: Record<ApplicationStatus, nu
   );
 }
 
-/** "Worth a look" (DSH-5): offers, drafts, quiet applications and interviews. */
-function WorthALook({ items, quietDays }: { items: DashboardFigures["attention"]; quietDays: number }) {
+/** "For your review" (DSH-5): what's waiting on the user: offers, drafts, quiet applications, interviews and the job agent's finds. */
+function ForReview({ items, quietDays, postingsFound }: { items: DashboardFigures["attention"]; quietDays: number; postingsFound: number }) {
+  const count = items.length + (postingsFound > 0 ? 1 : 0);
   return (
-    <section aria-labelledby="attention-heading" className={`${card} px-7 pt-[26px] pb-3.5`}>
-      <div className="flex items-baseline justify-between gap-3 pb-3">
-        <h2 id="attention-heading" className="text-[15px] font-medium">
-          Worth a look
+    <section aria-labelledby="attention-heading" className="flex max-w-[1280px] flex-col gap-3 px-10 pt-9 pb-9 max-sm:px-4">
+      <div className="flex items-baseline gap-3">
+        <h2 id="attention-heading" className="font-display text-section">
+          For your review
         </h2>
-        {items.length > 0 && <span className="text-meta text-muted">{plural(items.length, "thing", "things")}</span>}
+        {count > 0 && <span className="text-meta text-muted">{plural(count, "thing", "things")}</span>}
       </div>
-      {items.length === 0 ? (
-        <p className="border-t border-line py-5 text-sm text-muted">All caught up. Nice.</p>
+      {count === 0 ? (
+        <p className="text-sm text-muted">Nothing needs you right now.</p>
       ) : (
-        <ul>
+        <ul className={`${card} divide-y divide-line px-5`}>
+          {postingsFound > 0 && (
+            <li className="-mx-2.5">
+              <Link href="/agent" className="flex items-start gap-3 rounded-control px-2.5 py-[13px] text-ink hover:bg-hover">
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-field font-medium">Your search analyst found {plural(postingsFound, "posting", "postings")}</span>
+                  <span className="text-meta leading-[1.45] text-muted">Scored against your profile, the best first.</span>
+                </span>
+                <span className="mt-px flex-none text-meta text-muted">Review</span>
+              </Link>
+            </li>
+          )}
           {items.map((item) => (
-            <li key={item.id} className="-mx-2.5 border-t border-line">
+            <li key={item.id} className="-mx-2.5">
               <Link href={`/applications/${item.id}${item.tab ? `?tab=${item.tab}` : ""}`} className="flex items-start gap-3 rounded-control px-2.5 py-[13px] text-ink hover:bg-hover">
                 <StatusDot status={item.status} className="mt-1.5" />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -185,7 +202,7 @@ function WorthALook({ items, quietDays }: { items: DashboardFigures["attention"]
                   </span>
                   <span className="text-meta leading-[1.45] text-muted">{item.reason}</span>
                 </span>
-                <span className="mt-px flex-none text-meta text-muted">{item.action} →</span>
+                <span className="mt-px flex-none text-meta text-muted">{item.action}</span>
               </Link>
             </li>
           ))}
@@ -199,10 +216,10 @@ function WorthALook({ items, quietDays }: { items: DashboardFigures["attention"]
 /** Before the first application: where to begin. */
 function Welcome() {
   return (
-    <Panel>
-      <h2 className="font-serif text-section">Welcome to Dossier</h2>
+    <div className="pt-8"><Panel>
+      <h2 className="font-display text-section">Start with your profile</h2>
       <p className="text-sm text-muted">
-        Start with your profile: your roles, skills and education are what every tailored resume and cover letter is built from.
+        Your roles, skills and education are what your staff builds every resume and letter from.
         Then paste a job posting, and your funnel and next steps will show up here.
       </p>
       <div className="flex flex-wrap items-center gap-4 pt-1">
@@ -213,7 +230,7 @@ function Welcome() {
           + New application
         </Link>
       </div>
-    </Panel>
+    </Panel></div>
   );
 }
 

@@ -318,7 +318,7 @@ function Report({ report, sessionId, applicationId, role }: { report: InterviewR
           <p className="max-w-[560px] text-lead text-pretty">{report.readiness}</p>
         </div>
         <div className="flex flex-col items-end">
-          <span className="font-serif text-[44px] leading-none font-semibold tabular-nums">{report.overall.toFixed(1)}</span>
+          <span className="font-display text-[44px] leading-none font-semibold tabular-nums">{report.overall.toFixed(1)}</span>
           <span className="text-meta text-muted">average of 5</span>
         </div>
       </div>

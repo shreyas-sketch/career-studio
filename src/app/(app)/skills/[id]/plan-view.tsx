@@ -107,7 +107,7 @@ export function PlanView({ plan, jobId: initialJob, aiReady }: { plan: PlanData;
       {content && (
         <>
           <div className="flex flex-wrap items-center gap-4 rounded-card border border-line-card bg-card px-5 py-4">
-            <span className="font-serif text-3xl font-semibold tabular-nums">{percent}%</span>
+            <span className="font-display text-3xl font-semibold tabular-nums">{percent}%</span>
             <span className="flex min-w-48 flex-1 flex-col gap-1.5">
               <span aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-track">
                 <span className="block h-full rounded-full bg-accent motion-safe:transition-[width] motion-safe:duration-500" style={{ width: `${percent}%` }} />
@@ -126,7 +126,7 @@ export function PlanView({ plan, jobId: initialJob, aiReady }: { plan: PlanData;
                     <span className="text-label font-semibold tracking-wide text-accent-text uppercase">
                       Phase {index + 1} · weeks {phase.weeks}
                     </span>
-                    <h3 className="font-serif text-xl">{phase.title}</h3>
+                    <h3 className="font-display text-xl font-medium">{phase.title}</h3>
                   </div>
                   <p className="text-sm text-muted">{phase.goal}</p>
                   <ul className="flex flex-col gap-2">
@@ -176,7 +176,7 @@ export function PlanView({ plan, jobId: initialJob, aiReady }: { plan: PlanData;
           <div className="grid gap-6 lg:grid-cols-2">
             <Card className="flex flex-col gap-3">
               <span className="text-label font-semibold tracking-wide text-accent-text uppercase">Portfolio piece</span>
-              <h3 className="font-serif text-xl">{content.project.title}</h3>
+              <h3 className="font-display text-xl font-medium">{content.project.title}</h3>
               <p className="text-sm whitespace-pre-wrap text-pretty">{content.project.brief}</p>
               <Points title="Shows" items={content.project.demonstrates} tone="good" />
             </Card>

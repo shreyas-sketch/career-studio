@@ -1,7 +1,7 @@
 import localFont from "next/font/local";
 
-// Every font ships with the app (PRD RES-7), so nothing is fetched from a font
-// CDN and the app and its PDFs work offline. See README.md in this folder.
+// Every font is served by the app itself (PRD RES-7), so nothing is fetched from
+// a font CDN and the app and its PDFs work offline. See README.md in this folder.
 //
 // Each font sets a --typeface-* variable on <html>; globals.css maps them to
 // Tailwind's font-* utilities, and the resume themes use them directly.
@@ -14,7 +14,21 @@ export const geist = localFont({
   fallback: ["Helvetica", "Arial", "sans-serif"],
 });
 
-/** Page and section titles; also a resume theme font. */
+/**
+ * Career Studio's titles. Interface only: its licence forbids offering it as a
+ * font people can choose, so it must never join the resume themes. Its files
+ * aren't committed either; scripts/fetch-switzer.mjs downloads them.
+ */
+export const switzer = localFont({
+  src: [
+    { path: "./switzer/Switzer-Variable.woff2", weight: "100 900", style: "normal" },
+    { path: "./switzer/Switzer-VariableItalic.woff2", weight: "100 900", style: "italic" },
+  ],
+  variable: "--typeface-switzer",
+  fallback: ["Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
+});
+
+/** A resume theme font. */
 export const newsreader = localFont({
   src: [
     { path: "./newsreader/Newsreader-Variable.woff2", weight: "200 800", style: "normal" },
@@ -23,6 +37,7 @@ export const newsreader = localFont({
   variable: "--typeface-newsreader",
   fallback: ["Georgia", "serif"],
   adjustFontFallback: "Times New Roman",
+  preload: false,
 });
 
 // The remaining fonts are only used on some screens (code-like values, resume
@@ -239,6 +254,7 @@ export const notoSansSc = localFont({
 /** Class names that define every --typeface-* variable; set on <html>. */
 export const fontVariables = [
   geist,
+  switzer,
   newsreader,
   plexSans,
   plexMono,

@@ -36,7 +36,7 @@ export function ApplicationHeader({
               <li aria-hidden="true">/</li>
             </ol>
           </nav>
-          <h1 className="font-serif text-[34px] leading-[1.15] tracking-[-0.015em] text-pretty">{name}</h1>
+          <h1 className="font-display text-[30px] leading-[1.15] font-medium tracking-[-0.024em] text-pretty">{name}</h1>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
       </PageBar>

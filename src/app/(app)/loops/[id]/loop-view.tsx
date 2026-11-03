@@ -169,7 +169,7 @@ function Round({ round, index, count, jobId: initialJob, aiReady, startOpen }: {
 
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-serif text-xl">Prep for this round</h3>
+                <h3 className="font-display text-xl font-medium">Prep for this round</h3>
                 <Button
                   size="sm"
                   variant={round.prep ? "secondary" : "primary"}
@@ -189,7 +189,7 @@ function Round({ round, index, count, jobId: initialJob, aiReady, startOpen }: {
             </div>
 
             <div className="flex flex-col gap-3">
-              <h3 className="font-serif text-xl">Practise it</h3>
+              <h3 className="font-display text-xl font-medium">Practise it</h3>
               <div className="flex flex-wrap items-center gap-3">
                 <SegmentedControl
                   size="sm"
@@ -230,7 +230,7 @@ function Round({ round, index, count, jobId: initialJob, aiReady, startOpen }: {
             </div>
 
             <div className="flex flex-col gap-3">
-              <h3 className="font-serif text-xl">After the round</h3>
+              <h3 className="font-display text-xl font-medium">After the round</h3>
               <AutosaveTextarea label="How it went, and any feedback you got" rows={4} initial={round.notes} hint="The next round's prep reads this." save={(value) => save({ notes: value })} />
               <div className="flex flex-wrap items-center gap-2">
                 <SegmentedControl

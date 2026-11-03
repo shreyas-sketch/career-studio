@@ -52,10 +52,10 @@ test("the time filter scopes the figures and is remembered (E9-8)", async ({ pag
   await expect(page.getByText(/^You've sent/)).toBeVisible();
 });
 
-test("interview dates show in Worth a look, and moving to Interview asks for one (E9-9)", async ({ page }) => {
+test("interview dates show under For your review, and moving to Interview asks for one (E9-9)", async ({ page }) => {
   // The demo's interview is tomorrow.
   await page.goto("/");
-  const worth = page.getByRole("region", { name: "Worth a look" });
+  const worth = page.getByRole("region", { name: "For your review" });
   const first = worth.getByRole("link").first();
   await expect(first).toContainText("Northstar Health");
   await expect(first).toContainText("Soon");
@@ -86,7 +86,7 @@ test("interview dates show in Worth a look, and moving to Interview asks for one
 
 test("the follow-up threshold is a setting (E9-9)", async ({ page }) => {
   await page.goto("/");
-  const worth = page.getByRole("region", { name: "Worth a look" });
+  const worth = page.getByRole("region", { name: "For your review" });
   const threshold = worth.getByLabel("Suggest a follow-up after");
   await expect(threshold).toHaveValue("7");
   const nudges = worth.getByRole("link").filter({ hasText: "No news for" });

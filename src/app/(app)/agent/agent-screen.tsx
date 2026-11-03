@@ -256,7 +256,7 @@ function Section({ title, count, children }: { title: string; count: number; chi
   return (
     <section aria-labelledby={id} className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={id} className="font-serif text-section">
+        <h2 id={id} className="font-display text-section">
           {title}
         </h2>
         <p className="text-meta text-muted">{count} waiting</p>
@@ -285,7 +285,7 @@ function CandidateCard({ candidate, children }: { candidate: AgentCandidateView;
     <Card padding="none" className="flex flex-col gap-3.5 px-6 py-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="font-serif text-[20px] leading-tight text-pretty">{candidate.title}</h3>
+          <h3 className="font-display text-[18px] leading-tight font-medium text-pretty">{candidate.title}</h3>
           {candidate.company && <p className="text-sm text-ink">{candidate.company}</p>}
           {candidate.facts && <p className="text-meta text-muted">{candidate.facts}</p>}
           {candidate.origin && <p className="text-xs text-muted">{candidate.origin}</p>}

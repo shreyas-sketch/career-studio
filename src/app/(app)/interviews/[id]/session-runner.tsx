@@ -3,7 +3,7 @@
 import { ChevronDown, CornerDownLeft, Flag, Mic, MicOff, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
 import { JobProgress } from "@/components/career/job-progress";
 import { Points, Screen, ScorePips } from "@/components/career/parts";
@@ -204,6 +204,8 @@ function Feedback({ feedback }: { feedback: AnswerFeedback }) {
   );
 }
 
+const noSubscription = () => () => {};
+
 type Recognition = { start(): void; stop(): void; onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null; onend: (() => void) | null; continuous: boolean; interimResults: boolean; lang: string };
 
 function AnswerBox({ sessionId, turnId, onSent }: { sessionId: string; turnId: string; onSent: (jobId: string) => void }) {
@@ -212,10 +214,14 @@ function AnswerBox({ sessionId, turnId, onSent }: { sessionId: string; turnId: s
   const [listening, setListening] = useState(false);
   const recognition = useRef<Recognition | null>(null);
   const area = useRef<HTMLTextAreaElement>(null);
-  const [canDictate, setCanDictate] = useState(false);
+  // Dictation only where the browser offers speech recognition (Chrome, Edge, Safari).
+  const canDictate = useSyncExternalStore(
+    noSubscription,
+    () => "SpeechRecognition" in window || "webkitSpeechRecognition" in window,
+    () => false,
+  );
   useEffect(() => {
     area.current?.focus({ preventScroll: true });
-    setCanDictate(typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window));
     return () => recognition.current?.stop();
   }, []);
   const words = answer.trim() ? answer.trim().split(/\s+/).length : 0;

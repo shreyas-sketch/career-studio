@@ -1,6 +1,6 @@
 # Career Studio's design: the crew on a mobile
 
-This is one of two design directions. It presents the agents as **a crew of seven hanging on a kinetic mobile**, in the tradition of Calder's sculpture and Miró's creatures. The other, a staff of seven robots, is on the `design/living-mobile` branch.
+This is one of two design directions. It presents the agents as **a crew of seven hanging on a kinetic mobile**, in the tradition of Calder's sculpture and Miró's creatures. The other, a staff of seven robots, is on the `design/robot-staff` branch.
 
 ## The rule that makes it work: motion is never pretend
 

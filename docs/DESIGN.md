@@ -14,9 +14,11 @@ The PRD says nothing is simulated, and that applies to movement too. A spinner o
 | They look at their work | Same; otherwise they watch the pointer |
 | A slip of paper falls to the corner | A job finished (`CrewHandovers`), and the page behind it refreshes |
 | A member hangs crooked with a red tag | Their latest job failed, in the last 30 minutes |
-| Gentle drift, nothing else | Nobody's working. Only the air moves them, and the sentence says so |
+| A slow, barely visible drift | Nobody's working. Only the air moves them, and the sentence says so |
 
 `src/lib/crew/live.ts` reads all of this from the account's `Job` rows. The browser asks `/api/crew` every 1.8s while something's running, every 12s otherwise, and not at all from a hidden tab.
+
+Movement is kept small and slow: the mobile should feel like a calm object in a room, noticed rather than watched. A job shows as a slight dip and a small, steady motion, never a large swing.
 
 ## The crew
 

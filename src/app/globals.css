@@ -154,7 +154,7 @@
   --animate-rise-in: rise-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
   /* A member at small size, on their wire. Use with motion-safe:. */
-  --animate-crew-swing: crew-swing 1.5s ease-in-out infinite;
+  --animate-crew-swing: crew-swing 2.8s ease-in-out infinite;
   --animate-crew-wait: crew-wait 2.4s ease-in-out infinite;
   /* A slip of finished work dropping out of the air: it drifts one way, then the other, and lands. */
   --animate-slip-fall: slip-fall 900ms cubic-bezier(0.3, 0.1, 0.45, 1) both;
@@ -179,19 +179,19 @@
   @keyframes crew-swing {
     0%,
     100% {
-      transform: rotate(-13deg);
+      transform: rotate(-5deg);
     }
     50% {
-      transform: rotate(13deg);
+      transform: rotate(5deg);
     }
   }
   @keyframes crew-wait {
     0%,
     100% {
-      transform: rotate(-3deg);
+      transform: rotate(-1.5deg);
     }
     50% {
-      transform: rotate(3deg);
+      transform: rotate(1.5deg);
     }
   }
 

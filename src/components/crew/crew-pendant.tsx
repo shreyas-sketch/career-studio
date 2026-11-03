@@ -24,7 +24,7 @@ export function CrewPendant({ id }: { id: CrewId }) {
   const velocity = useRef(0);
 
   useEffect(() => {
-    if (statusRef.current !== member.status || member.step) velocity.current += 1.1;
+    if (statusRef.current !== member.status || member.step) velocity.current += 0.3;
     statusRef.current = member.status;
   }, [member.status, member.step]);
 
@@ -45,7 +45,7 @@ export function CrewPendant({ id }: { id: CrewId }) {
     const onMove = (event: PointerEvent) => {
       const box = root.getBoundingClientRect();
       const x = event.clientX - box.left - box.width / 2;
-      if (seen) velocity.current += Math.max(-0.5, Math.min(0.5, (x - pointerX) * 0.004)) * Math.max(0, 1 - Math.abs(x) / 500);
+      if (seen) velocity.current += Math.max(-0.12, Math.min(0.12, (x - pointerX) * 0.001)) * Math.max(0, 1 - Math.abs(x) / 500);
       pointerX = x;
       pointerY = event.clientY - box.top - WIRE - 18;
       seen = true;
@@ -56,8 +56,8 @@ export function CrewPendant({ id }: { id: CrewId }) {
       last = now;
       time += dt;
       const working = statusRef.current === "working";
-      const air = 0.05 * Math.sin(time * 0.7) + 0.03 * Math.sin(time * 1.9 + 1) + (working ? 0.9 * Math.sin(time * 3.1) : 0);
-      velocity.current += (-14 * Math.sin(angle) - 0.8 * velocity.current + air) * dt;
+      const air = 0.015 * Math.sin(time * 0.5) + 0.008 * Math.sin(time * 1.1 + 1) + (working ? 0.18 * Math.sin(time * 1.6) : 0);
+      velocity.current += (-14 * Math.sin(angle) - 2.2 * velocity.current + air) * dt;
       angle += velocity.current * dt;
       swingRef.current?.setAttribute("transform", `translate(30 0) rotate(${((-angle * 180) / Math.PI).toFixed(2)})`);
 

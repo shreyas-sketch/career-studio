@@ -51,16 +51,18 @@ export const RIG_ANCHOR = { x: 592, y: 0 };
 
 const GRAVITY = 900;
 const BEAM_STIFFNESS = 1.6;
-const BEAM_DAMPING = 0.6;
-const BEAM_GAIN = 0.55;
-const SWING_DAMPING = 0.42;
+const BEAM_DAMPING = 1.4;
+const BEAM_GAIN = 0.2;
+const SWING_DAMPING = 1.3;
 const MAX_ACCEL = 3000;
 /** How far arm ends droop, so a wire reads as bent and not ruled. */
 const DROOP = 0.055;
 /** Extra weight a job gives its member, then each further job. */
 const WORK_LOAD = 0.55;
 const EXTRA_JOB_LOAD = 0.15;
-const CROOKED = 0.34;
+const CROOKED = 0.2;
+/** The fastest the pointer's air can swing a member, in radians a second. */
+const MAX_STIR = 0.14;
 
 export type Gesture = { rot: number; bob: number; yaw: number; scale: number; push: number; look: { x: number; y: number } };
 
@@ -72,24 +74,24 @@ export function gesture(id: CrewId, t: number): Gesture {
   const idle: Gesture = { rot: 0, bob: 0, yaw: 0, scale: 1, push: 0, look: { x: 0, y: 1 } };
   switch (id) {
     case "scout": // Looks left and right, turning right round.
-      return { ...idle, yaw: 1.05 * Math.sin(t * 1.15), rot: 0.07 * Math.sin(t * 1.15), look: { x: Math.sin(t * 1.15), y: 0.2 } };
+      return { ...idle, yaw: 0.4 * Math.sin(t * 0.7), rot: 0.025 * Math.sin(t * 0.7), look: { x: Math.sin(t * 0.7), y: 0.2 } };
     case "tailor": // Stitches: quick, short and even.
-      return { ...idle, bob: 8 * Math.abs(Math.sin(t * 3.4)), rot: 0.05 * Math.sin(t * 6.8) };
+      return { ...idle, bob: 2.5 * Math.abs(Math.sin(t * 1.8)), rot: 0.012 * Math.sin(t * 3.6) };
     case "interviewer": { // Nods along, then waits.
-      const nod = Math.sin(t * 2.1);
-      return { ...idle, rot: 0.2 * nod * nod * nod, look: { x: 0.4, y: 0.5 } };
+      const nod = Math.sin(t * 1.2);
+      return { ...idle, rot: 0.07 * nod * nod * nod, look: { x: 0.4, y: 0.5 } };
     }
     case "usher": // Paces.
-      return { ...idle, push: 0.5 * Math.sign(Math.sin(t * 1.3)), rot: 0.1 * Math.sin(t * 1.3), look: { x: Math.sign(Math.sin(t * 1.3)), y: 0.3 } };
+      return { ...idle, push: 0.08 * Math.sin(t * 0.8), rot: 0.035 * Math.sin(t * 0.8), look: { x: Math.sign(Math.sin(t * 0.8)), y: 0.3 } };
     case "prospector": { // Digs: down hard, up slowly.
-      const phase = (t * 0.62) % 1;
+      const phase = (t * 0.38) % 1;
       const dig = phase < 0.18 ? phase / 0.18 : 1 - (phase - 0.18) / 0.82;
-      return { ...idle, bob: 20 * dig, rot: 0.14 * dig };
+      return { ...idle, bob: 6 * dig, rot: 0.04 * dig };
     }
     case "appraiser": // Weighs one side against the other.
-      return { ...idle, rot: 0.3 * Math.sin(t * 0.95), look: { x: Math.sin(t * 0.95), y: 0.6 } };
+      return { ...idle, rot: 0.1 * Math.sin(t * 0.6), look: { x: Math.sin(t * 0.6), y: 0.6 } };
     case "coach": // Grows.
-      return { ...idle, scale: 1 + 0.09 * (0.5 + 0.5 * Math.sin(t * 1.5)), rot: 0.04 * Math.sin(t * 0.75), look: { x: 0, y: -1 } };
+      return { ...idle, scale: 1 + 0.035 * (0.5 + 0.5 * Math.sin(t * 0.9)), rot: 0.012 * Math.sin(t * 0.45), look: { x: 0, y: -1 } };
   }
 }
 
@@ -160,7 +162,7 @@ export class Mobile {
   /** Plucks a member's wire, as when a step changes or someone reaches for them. */
   pluck(id: CrewId, strength = 1): void {
     const node = this.shapeNodes.get(id);
-    if (node) node.phiV += strength * 0.9 * (node.seed % 2 > 1 ? 1 : -1);
+    if (node) node.phiV += strength * 0.28 * (node.seed % 2 > 1 ? 1 : -1);
   }
 
   /** Moving air from the pointer: it pushes what's near it, and fades with distance. */
@@ -170,9 +172,10 @@ export class Mobile {
       if (distance > 260) continue;
       const near = 1 - distance / 260;
       const node = this.shapeNodes.get(shape.id)!;
-      node.phiV += near * near * vx * 0.0011;
+      // Capped, so a fast sweep of the pointer stirs them and no more.
+      node.phiV = Math.max(-MAX_STIR, Math.min(MAX_STIR, node.phiV + near * near * vx * 0.00004));
     }
-    this.root.thetaV += vy * 0.00002;
+    this.root.thetaV = Math.max(-0.01, Math.min(0.01, this.root.thetaV + vy * 0.000001));
   }
 
   private loadOf(node: Node): number {
@@ -212,7 +215,7 @@ export class Mobile {
     }
     for (const node of this.nodes) {
       if (isShape(node.hang)) continue;
-      const accel = this.beamPull(node) - BEAM_STIFFNESS * node.theta - BEAM_DAMPING * node.thetaV + 0.012 * this.wind * drift(this.time, node.seed);
+      const accel = this.beamPull(node) - BEAM_STIFFNESS * node.theta - BEAM_DAMPING * node.thetaV + 0.0035 * this.wind * drift(this.time, node.seed);
       node.thetaV += accel * h;
       node.theta += node.thetaV * h;
     }
@@ -231,7 +234,7 @@ export class Mobile {
         node.lastVX = vx;
         const work = isShape(hang) ? Math.min(1, (this.load.get(hang.shape) ?? 0) / WORK_LOAD) : 0;
         const push = isShape(hang) && work > 0 ? work * gesture(hang.shape, this.busyFor.get(hang.shape) ?? 0).push : 0;
-        const air = 0.09 * this.wind * drift(this.time * 1.1, node.seed * 1.7);
+        const air = 0.04 * this.wind * drift(this.time * 0.7, node.seed * 1.7);
         const accel = (-GRAVITY / length) * Math.sin(node.phi) - SWING_DAMPING * node.phiV - (carried / length) * Math.cos(node.phi) + air + push;
         node.phiV += accel * h;
         node.phi += node.phiV * h;
@@ -247,7 +250,7 @@ export class Mobile {
         const load = this.load.get(hang.shape) ?? 0;
         const work = Math.min(1, load / WORK_LOAD);
         const move = gesture(hang.shape, this.busyFor.get(hang.shape) ?? 0);
-        const turning = this.wind * (0.5 * Math.sin(0.37 * this.time + node.seed) + 0.22 * Math.sin(0.83 * this.time + node.seed * 2)) + work * move.yaw;
+        const turning = this.wind * (0.12 * Math.sin(0.19 * this.time + node.seed) + 0.05 * Math.sin(0.43 * this.time + node.seed * 2)) + work * move.yaw;
         out.shapes.push({
           id: hang.shape,
           x: ex,
@@ -261,7 +264,7 @@ export class Mobile {
         return;
       }
 
-      const turn = Math.cos(this.wind * 0.26 * Math.sin(0.23 * this.time + node.seed));
+      const turn = Math.cos(this.wind * 0.08 * Math.sin(0.13 * this.time + node.seed));
       const cos = Math.cos(node.theta) * turn;
       const sin = Math.sin(node.theta);
       const lx = ex - hang.left * cos;

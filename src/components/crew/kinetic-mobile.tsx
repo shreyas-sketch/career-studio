@@ -253,7 +253,7 @@ export function KineticMobile({ bare = false, className, children }: { bare?: bo
 
   const reach = (id: CrewId) => {
     attention.current.set(id, 1);
-    mobile.pluck(id, 1.1);
+    mobile.pluck(id, 0.5);
   };
   const leave = (id: CrewId) => attention.current.set(id, 0);
 

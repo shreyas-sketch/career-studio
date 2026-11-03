@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { contentDisposition } from "@/lib/file-name";
+import { currentUserId } from "@/lib/tenancy/context";
 
 // Rendered PDFs waiting to be downloaded. The download button has the server
 // render first, so it can say it's busy and show errors, then lets the
@@ -13,9 +14,11 @@ import { contentDisposition } from "@/lib/file-name";
 /** How long a rendered PDF waits for its download. */
 export const HOLD_MS = 5 * 60_000;
 /** The most PDFs held at once; the oldest goes first. */
-const MAX_HELD = 20;
+const MAX_HELD = 100;
 
-type Held = { pdf: Uint8Array; fileName: string; expires: number };
+// Career Studio: each held PDF belongs to the account that rendered it, and
+// only that account can collect it.
+type Held = { pdf: Uint8Array; fileName: string; expires: number; owner: string | null };
 
 // Kept on globalThis so the dev server's hot reloads don't drop them.
 const globalForHeld = globalThis as unknown as { heldPdfs?: Map<string, Held> };
@@ -26,19 +29,19 @@ function dropExpired(now: number): void {
 }
 
 /** Keeps a rendered PDF for its download; returns the id to fetch it by. */
-export function holdPdf(pdf: Uint8Array, fileName: string, now = Date.now()): string {
+export function holdPdf(pdf: Uint8Array, fileName: string, now = Date.now(), owner: string | null = currentUserId()): string {
   dropExpired(now);
   while (held.size >= MAX_HELD) held.delete(held.keys().next().value!);
   const id = randomUUID();
-  held.set(id, { pdf, fileName, expires: now + HOLD_MS });
+  held.set(id, { pdf, fileName, expires: now + HOLD_MS, owner });
   return id;
 }
 
 /** A held PDF, or null once it has expired. */
-export function heldPdf(id: string, now = Date.now()): { pdf: Uint8Array; fileName: string } | null {
+export function heldPdf(id: string, now = Date.now(), owner: string | null = currentUserId()): { pdf: Uint8Array; fileName: string } | null {
   dropExpired(now);
   const file = held.get(id);
-  return file ? { pdf: file.pdf, fileName: file.fileName } : null;
+  return file && file.owner === owner ? { pdf: file.pdf, fileName: file.fileName } : null;
 }
 
 /** A PDF as a download named `fileName`. */

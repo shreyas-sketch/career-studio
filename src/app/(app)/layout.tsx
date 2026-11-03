@@ -5,15 +5,11 @@ import { countAgentQueue } from "@/lib/agent/view";
 import { verifySession } from "@/lib/auth/session";
 import { inboxCount } from "@/lib/google/inbox-data";
 import { loadProfileName } from "@/lib/profile-data";
-import { loadSettings } from "@/lib/settings-data";
 import { COLOR_SCHEME_COOKIE, parseColorScheme, parseSidebarCollapsed, SIDEBAR_COOKIE } from "@/lib/ui-preferences";
 import { rememberBrowserTimeZone, userTimeZone } from "@/lib/time-zone";
-import { checkForUpdatesDaily, updateNotice } from "@/lib/update-check";
-import { askForUsagePing, notePageLoad, USAGE_PING_HOST } from "@/lib/usage-ping";
-import { appVersion } from "@/lib/version";
+import { findAccount } from "@/lib/accounts/users";
 
 import { Sidebar } from "./sidebar";
-import { UsagePingDialog } from "./usage-ping-dialog";
 
 /**
  * The signed-in shell: sidebar on the left, the screen on the right. Routes
@@ -22,16 +18,14 @@ import { UsagePingDialog } from "./usage-ping-dialog";
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   // Proxy already redirects signed-out visitors; this is the check next to the data.
-  await verifySession();
-  // The day's usage ping and update check, if they haven't run yet: after the page, so they never slow one down.
-  after(notePageLoad);
-  after(checkForUpdatesDaily);
+  const session = await verifySession();
+  // Career Studio sends no usage ping and checks no Dossier releases.
   // The browser's zone, for the inbox check, which runs without a request.
   const zone = await userTimeZone();
   after(() => rememberBrowserTimeZone(zone));
 
-  const [name, settings, jar] = await Promise.all([loadProfileName(), loadSettings(), cookies()]);
-  const userName = name.trim() || "New user";
+  const [name, account, jar] = await Promise.all([loadProfileName(), findAccount(session.userId), cookies()]);
+  const userName = name.trim() || account?.name || "New user";
   // Replies waiting for an answer or a link, on the Inbox item; the job agent's finds and drafts on its own (E16-6).
   const [waiting, agent] = await Promise.all([inboxCount().catch(() => 0), countAgentQueue().catch(() => 0)]);
 
@@ -45,8 +39,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </a>
       <Sidebar
         userName={userName}
-        update={updateNotice(settings)}
-        currentVersion={appVersion}
+        email={account?.email ?? ""}
         collapsed={parseSidebarCollapsed(jar.get(SIDEBAR_COOKIE)?.value)}
         counts={{ ...(waiting > 0 ? { "/inbox": waiting } : {}), ...(agent > 0 ? { "/agent": agent } : {}) }}
         colorScheme={parseColorScheme(jar.get(COLOR_SCHEME_COOKIE)?.value)}
@@ -63,8 +56,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
       </div>
-      {/* Asked once, until answered (#172); nothing is sent before a yes. */}
-      {askForUsagePing(settings) && <UsagePingDialog host={USAGE_PING_HOST} />}
     </div>
   );
 }

@@ -28,12 +28,12 @@ export const newsreader = localFont({
 // The remaining fonts are only used on some screens (code-like values, resume
 // themes), so they load when a page uses them instead of being preloaded.
 
+/** Career Studio's interface text. */
 export const plexSans = localFont({
   src: "./ibm-plex-sans/IBMPlexSans-Variable.woff2",
   weight: "100 700",
   variable: "--typeface-plex-sans",
   fallback: ["Helvetica", "Arial", "sans-serif"],
-  preload: false,
 });
 
 export const plexMono = localFont({
@@ -94,13 +94,13 @@ export const playfair = localFont({
   preload: false,
 });
 
+/** Career Studio's titles; also a resume theme font. */
 export const fraunces = localFont({
   src: "./fraunces/Fraunces-Variable.woff2",
   weight: "100 900",
   variable: "--typeface-fraunces",
   fallback: ["Georgia", "serif"],
   adjustFontFallback: "Times New Roman",
-  preload: false,
 });
 
 export const inter = localFont({

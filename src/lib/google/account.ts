@@ -5,6 +5,7 @@ import { decryptSecret, encryptSecret, GOOGLE_TOKEN, SecretUnreadable } from "@/
 
 import { GoogleError } from "./errors";
 import { googleClient, hasScopes, refreshAccessToken, revokeToken, type ScopeGroup } from "./oauth";
+import { requireUserId } from "@/lib/tenancy/context";
 
 // The connected Google account (E15-1) and authorised calls to Google's APIs.
 // Access tokens last an hour and are kept in memory only; the refresh token
@@ -61,7 +62,7 @@ export async function saveGoogleAccount({ email, refreshToken, scopes }: { email
     create: { id: ACCOUNT_ID, email, refreshTokenEnc, scopes },
     update: { email, refreshTokenEnc, scopes: merged, ...(sameAccount ? {} : { historyId: null, lastSyncAt: null, syncProblem: null }) },
   });
-  tokens.delete(ACCOUNT_ID);
+  tokens.delete(tokenKey());
 }
 
 /** Disconnects: revokes the grant at Google and forgets the account. Mail already fetched stays. */
@@ -74,12 +75,14 @@ export async function disconnectGoogle(): Promise<void> {
     if (!(error instanceof SecretUnreadable)) throw error;
   }
   await prisma.googleAccount.deleteMany({ where: { id: ACCOUNT_ID } });
-  tokens.delete(ACCOUNT_ID);
+  tokens.delete(tokenKey());
 }
 
 // On globalThis, so the dev server's hot reloads keep them.
 const globalForTokens = globalThis as unknown as { googleTokens?: Map<string, { token: string; expires: number }> };
 const tokens = (globalForTokens.googleTokens ??= new Map());
+/** Career Studio: access tokens are cached per account, never shared between them. */
+const tokenKey = () => `${requireUserId()}:${ACCOUNT_ID}`;
 
 /** A valid access token for the connected account, refreshed when it's about to expire. */
 export async function accessToken(group: ScopeGroup, signal?: AbortSignal): Promise<string> {
@@ -88,7 +91,7 @@ export async function accessToken(group: ScopeGroup, signal?: AbortSignal): Prom
   if (!hasScopes(account.scopes, group)) {
     throw new GoogleError("scope", "Dossier doesn't have that permission yet. Allow it in Settings → Google.");
   }
-  const cached = tokens.get(ACCOUNT_ID);
+  const cached = tokens.get(tokenKey());
   if (cached && cached.expires > Date.now() + 60_000) return cached.token;
   let refreshToken: string;
   try {
@@ -97,7 +100,7 @@ export async function accessToken(group: ScopeGroup, signal?: AbortSignal): Prom
     throw new GoogleError("revoked", "The saved Google access can't be read, probably since DOSSIER_SECRET changed. Connect your Google account again.");
   }
   const answer = await refreshAccessToken(refreshToken, signal);
-  tokens.set(ACCOUNT_ID, { token: answer.access_token, expires: Date.now() + answer.expires_in * 1000 });
+  tokens.set(tokenKey(), { token: answer.access_token, expires: Date.now() + answer.expires_in * 1000 });
   return answer.access_token;
 }
 
@@ -128,7 +131,7 @@ export async function googleFetch<T = unknown>(
   }
   const path = new URL(url).pathname;
   if (response.status === 401) {
-    tokens.delete(ACCOUNT_ID);
+    tokens.delete(tokenKey());
     throw new GoogleError("revoked", "Google no longer accepts Dossier's access. Connect your Google account again.", `${path}: 401`);
   }
   if (response.status === 403) throw new GoogleError("scope", "Google refused that. Check the permissions in Settings → Google.", `${path}: 403`);

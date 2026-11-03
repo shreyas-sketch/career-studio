@@ -15,9 +15,16 @@ describe("held PDFs", () => {
 
   it("drops the oldest when too many wait at once", () => {
     const now = Date.now();
-    const ids = Array.from({ length: 21 }, (_, index) => holdPdf(pdf, `${index}.pdf`, now));
+    const ids = Array.from({ length: 101 }, (_, index) => holdPdf(pdf, `${index}.pdf`, now));
     expect(heldPdf(ids[0], now)).toBeNull();
-    expect(heldPdf(ids[20], now)).toMatchObject({ fileName: "20.pdf" });
+    expect(heldPdf(ids[100], now)).toMatchObject({ fileName: "100.pdf" });
+  });
+
+  it("hands a PDF only to the account that rendered it (Career Studio)", () => {
+    const now = Date.now();
+    const id = holdPdf(pdf, "mine.pdf", now, "7e570000000000000000000a");
+    expect(heldPdf(id, now, "7e570000000000000000000b")).toBeNull();
+    expect(heldPdf(id, now, "7e570000000000000000000a")).toMatchObject({ fileName: "mine.pdf" });
   });
 
   it("answers with the PDF as a named download", async () => {

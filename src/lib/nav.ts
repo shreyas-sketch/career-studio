@@ -1,4 +1,20 @@
-import { Bot, BriefcaseBusiness, FileText, House, Inbox, Rocket, Search, Settings, UserRound, type LucideIcon } from "lucide-react";
+import {
+  Bot,
+  BriefcaseBusiness,
+  CalendarRange,
+  FileStack,
+  Handshake,
+  House,
+  Inbox,
+  MessagesSquare,
+  Receipt,
+  Rocket,
+  Search,
+  Settings,
+  Sprout,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 
 // The app's sections, shared by the sidebar and the page bar so they always agree.
 
@@ -15,20 +31,26 @@ const within = (pathname: string, base: string) =>
 
 /** The sections in groups; the last group sits at the bottom. */
 export const NAV: { label?: string; items: NavItem[] }[] = [
-  { items: [{ href: "/", label: "Dashboard", icon: House, isActive: (pathname) => pathname === "/" }] },
+  { items: [{ href: "/", label: "Today", icon: House, isActive: (pathname) => pathname === "/" }] },
   {
     label: "You",
     items: [
       { href: "/profile", label: "Profile", icon: UserRound },
-      { href: "/resume", label: "Base resume", icon: FileText },
+      {
+        href: "/resumes",
+        label: "Resumes",
+        icon: FileStack,
+        // Dossier's base resume belongs with the versions.
+        isActive: (pathname) => within(pathname, "/resumes") || within(pathname, "/resume"),
+      },
     ],
   },
   {
-    label: "Job search",
+    label: "Jobs",
     items: [
       { href: "/jobs", label: "Find jobs", icon: Search },
       { href: "/startups", label: "Startups", icon: Rocket },
-      { href: "/agent", label: "Agent", icon: Bot },
+      { href: "/agent", label: "Job agent", icon: Bot },
       {
         href: "/applications",
         label: "Applications",
@@ -38,6 +60,24 @@ export const NAV: { label?: string; items: NavItem[] }[] = [
       },
       { href: "/inbox", label: "Inbox", icon: Inbox },
     ],
+  },
+  {
+    label: "Interviews",
+    items: [
+      { href: "/interviews", label: "Practice", icon: MessagesSquare },
+      { href: "/loops", label: "Interview loops", icon: CalendarRange },
+    ],
+  },
+  {
+    label: "Freelance",
+    items: [
+      { href: "/freelance", label: "Opportunities", icon: Handshake },
+      { href: "/upwork", label: "Upwork analyst", icon: Receipt },
+    ],
+  },
+  {
+    label: "Grow",
+    items: [{ href: "/skills", label: "Skill plans", icon: Sprout }],
   },
   { items: [{ href: "/settings", label: "Settings", icon: Settings }] },
 ];

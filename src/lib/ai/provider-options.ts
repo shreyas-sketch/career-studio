@@ -18,6 +18,8 @@ export const PROVIDER_OPTIONS: readonly {
   defaultModel: string;
   /** The key field, if the card has one; `hint` says when it's needed. */
   apiKey: { label: string; hint?: string } | null;
+  /** Career Studio: where to get a key, step by step, for the setup instructions. */
+  setup?: { url: string; steps: string[] };
 }[] = [
   {
     value: AiProvider.LOCAL,
@@ -52,13 +54,18 @@ export const PROVIDER_OPTIONS: readonly {
     value: AiProvider.OPENAI,
     name: "OpenAI-compatible",
     vendor: null,
-    description: "Any server that speaks the OpenAI API, hosted or on your network.",
+    description: "OpenAI, or any service with OpenAI's API: OpenRouter, DeepSeek, Groq, Together and others.",
     tag: "Bring your own endpoint",
     local: false,
-    defaultUrl: "",
+    defaultUrl: "https://api.openai.com/v1",
     urlPlaceholder: "https://api.openai.com/v1",
+    urlHint: "OpenAI: https://api.openai.com/v1 · OpenRouter: https://openrouter.ai/api/v1 · DeepSeek: https://api.deepseek.com. It must be a public https address.",
     defaultModel: "",
     apiKey: { label: "API key" },
+    setup: {
+      url: "https://platform.openai.com/api-keys",
+      steps: ["Sign in to your provider's dashboard (for OpenAI, platform.openai.com).", "Create an API key and add billing or credits there.", "Paste the key below, pick a model and test the connection."],
+    },
   },
   {
     value: AiProvider.ANTHROPIC,
@@ -71,6 +78,10 @@ export const PROVIDER_OPTIONS: readonly {
     urlPlaceholder: "https://api.anthropic.com",
     defaultModel: "claude-sonnet-5",
     apiKey: { label: "API key" },
+    setup: {
+      url: "https://console.anthropic.com/settings/keys",
+      steps: ["Sign in at console.anthropic.com and add credits under Billing.", "Create a key under Settings → API keys.", "Paste it below, pick a model and test the connection."],
+    },
   },
   {
     value: AiProvider.MISTRAL,
@@ -83,8 +94,18 @@ export const PROVIDER_OPTIONS: readonly {
     urlPlaceholder: "https://api.mistral.ai/v1",
     defaultModel: "mistral-medium-latest",
     apiKey: { label: "API key" },
+    setup: {
+      url: "https://console.mistral.ai/api-keys",
+      steps: ["Sign in at console.mistral.ai and choose a plan (there's a free tier to start).", "Create a key under API keys.", "Paste it below, pick a model and test the connection."],
+    },
   },
 ];
+
+/**
+ * The providers a hosted Career Studio offers: on-device ones can't be
+ * reached from a server (src/lib/ai/index.ts refuses them too).
+ */
+export const HOSTED_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter((option) => !option.local);
 
 export function providerOption(provider: AiProvider) {
   return PROVIDER_OPTIONS.find((option) => option.value === provider)!;

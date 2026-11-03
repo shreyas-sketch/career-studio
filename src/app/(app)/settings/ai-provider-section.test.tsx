@@ -26,7 +26,7 @@ beforeEach(() => {
 
 describe("AiProviderSection", () => {
   it("shows the providers as a radio group, and the fields for the chosen one (SET-1)", async () => {
-    render(<AiProviderSection initial={local} />);
+    render(<AiProviderSection initial={local} onDeviceAllowed />);
     expect(screen.getByRole("heading", { name: "AI provider" })).toBeInTheDocument();
     expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("aria-label"))).toEqual([
       "Local model",
@@ -49,7 +49,7 @@ describe("AiProviderSection", () => {
     expect(screen.getByLabelText("Server address")).toHaveValue("https://api.anthropic.com");
     expect(screen.getByRole("note")).toHaveTextContent(/^Anthropic receives what each task needs: your profile without contact details, .* the drafts and your chat messages\. Importing a resume sends its whole text/);
     expect(screen.getByRole("note")).toHaveTextContent(/depend on your account with Anthropic\.$/);
-    expect(screen.getByLabelText("API key")).toHaveAttribute("placeholder", "Stored encrypted on your server");
+    expect(screen.getByLabelText("API key")).toHaveAttribute("placeholder", "Stored encrypted; never shown again");
     await waitFor(() =>
       expect(saveAiProvider).toHaveBeenCalledWith({ provider: "ANTHROPIC", baseUrl: "https://api.anthropic.com", model: "claude-sonnet-5" }),
     );
@@ -66,8 +66,13 @@ describe("AiProviderSection", () => {
     );
   });
 
-  it("fills in LM Studio on the Docker host, with an optional token and no note about data leaving (#210)", async () => {
+  it("offers only hosted providers on a hosted server (Career Studio)", () => {
     render(<AiProviderSection initial={local} />);
+    expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("aria-label"))).toEqual(["OpenAI-compatible", "Anthropic", "Mistral"]);
+  });
+
+  it("fills in LM Studio on the Docker host, with an optional token and no note about data leaving (#210)", async () => {
+    render(<AiProviderSection initial={local} onDeviceAllowed />);
     await userEvent.click(screen.getByRole("radio", { name: "LM Studio" }));
     expect(screen.getByLabelText("Server address")).toHaveValue("http://host.docker.internal:1234");
     expect(screen.getByText(/Serve on Local Network/)).toBeInTheDocument();

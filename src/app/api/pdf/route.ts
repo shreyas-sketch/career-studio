@@ -53,6 +53,17 @@ async function renderRequested(request: NextRequest): Promise<{ pdf: Uint8Array;
     };
   }
 
+  // Career Studio: a resume version (agent 2), `?doc=version&version={id}`.
+  if (doc === "version") {
+    const versionId = params.get("version") ?? "";
+    const version = APPLICATION_ID.test(versionId) ? await prisma.resumeVersion.findUnique({ where: { id: versionId }, select: { name: true } }) : null;
+    if (!version) return notFound("That resume no longer exists.");
+    return {
+      pdf: await renderPdf(`/print/version/${versionId}`),
+      fileName: resolveFileName(settings.fileNamePattern, { name, role: version.name, doc: DocumentKind.RESUME, date }),
+    };
+  }
+
   if (doc !== "resume" && doc !== "letter") return notFound("There's no such document to download.");
   const id = params.get("application") ?? "";
   const application = APPLICATION_ID.test(id)

@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { AiProvider } from "@/generated/prisma/enums";
-import { API_KEY_UNREADABLE, PROVIDER_OPTIONS, providerOption, type AiSettingsView } from "@/lib/ai/provider-options";
+import { API_KEY_UNREADABLE, HOSTED_PROVIDER_OPTIONS, PROVIDER_OPTIONS, providerOption, type AiSettingsView } from "@/lib/ai/provider-options";
 import { cn } from "@/lib/cn";
 import { useAutosave } from "@/hooks/use-autosave";
 
@@ -40,7 +40,7 @@ const SENT_TO_HOSTED =
  * picking a card or a model right away, typing once you pause. The key is
  * saved when you leave its field and never shown again.
  */
-export function AiProviderSection({ initial }: { initial: AiSettingsView }) {
+export function AiProviderSection({ initial, onDeviceAllowed = false }: { initial: AiSettingsView; /** Only for tests and single-user installs: Ollama and LM Studio. */ onDeviceAllowed?: boolean }) {
   const track = useTrackSave();
   const [provider, setProvider] = useState(initial.provider);
   const [baseUrl, setBaseUrl] = useState(initial.baseUrl);
@@ -132,7 +132,7 @@ export function AiProviderSection({ initial }: { initial: AiSettingsView }) {
   return (
     <>
       <SettingsSectionIntro title="AI provider">
-        This is what reads job postings and writes your drafts. A local model keeps everything on your machine.
+        Every agent in Career Studio runs on your own AI account: reading postings, writing documents, interviewing you, analysing jobs. Your key is encrypted on the server, used only for your work, and never shown again.
       </SettingsSectionIntro>
 
       <RadioGroup.Root
@@ -141,7 +141,7 @@ export function AiProviderSection({ initial }: { initial: AiSettingsView }) {
         onValueChange={(value) => chooseProvider(value as AiProvider)}
         className="grid grid-cols-1 gap-3 sm:grid-cols-2"
       >
-        {PROVIDER_OPTIONS.map((entry) => (
+        {(onDeviceAllowed ? PROVIDER_OPTIONS : HOSTED_PROVIDER_OPTIONS).map((entry) => (
           <RadioGroup.Item
             key={entry.value}
             value={entry.value}
@@ -166,11 +166,25 @@ export function AiProviderSection({ initial }: { initial: AiSettingsView }) {
         ))}
       </RadioGroup.Root>
 
+      {option.setup && (
+        <div className="flex flex-col gap-2 rounded-card border border-line-card bg-card px-4 py-3 text-sm">
+          <span className="font-medium">Setting up {option.name}</span>
+          <ol className="flex list-decimal flex-col gap-1 pl-5 text-muted">
+            {option.setup.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+          <a href={option.setup.url} target="_blank" rel="noopener noreferrer" className="self-start text-meta font-medium underline underline-offset-3">
+            Open the key page<span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </div>
+      )}
+
       {!option.local && (
         <p role="note" className="rounded-card bg-warning-surface px-4 py-3 text-meta text-warning">
           {option.vendor
             ? `${option.vendor} receives what each task needs: ${SENT_TO_HOSTED} How long it's kept and where it's processed depend on your account with ${option.vendor}.`
-            : `This server receives what each task needs: ${SENT_TO_HOSTED} If it isn't on your own network, all this leaves your server, and how long it's kept is up to whoever runs it.`}
+            : `The service at this address receives what each task needs: ${SENT_TO_HOSTED} How long it's kept is up to whoever runs it.`}
         </p>
       )}
 
@@ -251,7 +265,7 @@ export function AiProviderSection({ initial }: { initial: AiSettingsView }) {
                   ? "Saved · type a new key to replace it"
                   : keyState === "env"
                     ? "Using DOSSIER_AI_KEY · type one to save it here"
-                    : "Stored encrypted on your server"
+                    : "Stored encrypted; never shown again"
               }
               error={keyState === "unreadable" ? API_KEY_UNREADABLE : undefined}
               onChange={(event) => setKeyInput(event.target.value)}

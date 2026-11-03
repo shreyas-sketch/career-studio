@@ -9,8 +9,8 @@ import { COLOR_SCHEME_COOKIE, parseColorScheme } from "@/lib/ui-preferences";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Dossier", template: "%s · Dossier" },
-  description: "Your job search, on your server.",
+  title: { default: "Career Studio", template: "%s · Career Studio" },
+  description: "Jobs, resumes, interviews, freelancing and skills, in one workspace.",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

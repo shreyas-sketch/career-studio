@@ -93,9 +93,10 @@ export async function loadAiConfig(): Promise<AiConfig> {
  * Career Studio: each account brings its own provider and key, so the
  * operator's DOSSIER_AI_* variables never stand in for one (that would bill
  * every account's AI use to the operator). Only the timeout still applies.
+ * Until an account chooses, Anthropic is preselected, with no key.
  */
 function hostedEnv(): AiEnv {
-  return { DOSSIER_AI_PROVIDER: undefined, DOSSIER_AI_URL: undefined, DOSSIER_AI_MODEL: undefined, DOSSIER_AI_KEY: undefined, DOSSIER_AI_TIMEOUT_SECONDS: env.DOSSIER_AI_TIMEOUT_SECONDS };
+  return { DOSSIER_AI_PROVIDER: "anthropic", DOSSIER_AI_URL: undefined, DOSSIER_AI_MODEL: undefined, DOSSIER_AI_KEY: undefined, DOSSIER_AI_TIMEOUT_SECONDS: env.DOSSIER_AI_TIMEOUT_SECONDS };
 }
 
 /**

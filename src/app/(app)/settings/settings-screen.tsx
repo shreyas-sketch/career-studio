@@ -22,7 +22,7 @@ export function SettingsScreen({ section, children }: { section: SettingsSection
     <TrackSaveContext value={saves.track}>
       <PageHeader
         title="Settings"
-        description="It's your server, so it's your call. Choose which AI writes for you, set your document defaults, and take your data with you whenever you like."
+        description="Your AI provider and key, job sources, document defaults, connections and your data. Everything here applies to your account only."
         actions={<SavedIndicator status={saves.status} savedAt={saves.savedAt} />}
       />
       <div className="flex flex-wrap items-start gap-x-12 gap-y-8 px-10 pb-20">

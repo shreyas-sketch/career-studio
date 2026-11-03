@@ -50,7 +50,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
     <SettingsScreen section={section}>
       {section === "ai" ? (
         <>
-          <AiProviderSection initial={await loadAiSettingsView()} />
+          <AiProviderSection initial={await loadAiSettingsView()} onDeviceAllowed={process.env.CAREER_STUDIO_ALLOW_PRIVATE_AI_URLS === "1" && process.env.NODE_ENV !== "production"} />
           <AiBehaviour initial={{ creativity: settings.creativity, strict: settings.strict, showDiff: settings.showDiff }} />
         </>
       ) : section === "jobs" ? (

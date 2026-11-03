@@ -11,7 +11,7 @@ describe("SettingsScreen", () => {
       </SettingsScreen>,
     );
     expect(screen.getByRole("heading", { level: 1, name: "Settings" })).toBeInTheDocument();
-    expect(screen.getByText(/^It's your server, so it's your call\./)).toBeInTheDocument();
+    expect(screen.getByText(/^Your AI provider and key/)).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Settings sections" });
     const links = within(nav).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual(["AI provider", "Job search", "Scoring", "Job agent", "Documents", "Google", "MCP connector", "Your data", "About"]);

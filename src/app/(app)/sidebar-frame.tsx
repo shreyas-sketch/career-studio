@@ -1,7 +1,8 @@
 "use client";
 
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { createContext, use, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { createContext, use, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
 import { rememberPreference, SIDEBAR_COOKIE } from "@/lib/ui-preferences";
@@ -16,6 +17,21 @@ export function useSidebarCollapsed(): boolean {
 /** Opens a collapsed sidebar, for a part that needs its full width (the update notice). */
 export function useExpandSidebar(): () => void {
   return use(CollapsedContext).expand;
+}
+
+const NARROW = "(max-width: 767px)";
+
+/** Whether the window is too narrow to keep the sidebar open beside the screen. */
+function useNarrow(): boolean {
+  return useSyncExternalStore(
+    (changed) => {
+      const query = window.matchMedia?.(NARROW);
+      query?.addEventListener("change", changed);
+      return () => query?.removeEventListener("change", changed);
+    },
+    () => window.matchMedia?.(NARROW).matches ?? false,
+    () => false,
+  );
 }
 
 /**
@@ -34,9 +50,19 @@ export function SidebarFrame({
   brand: ReactNode;
   children: ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const [stored, setStored] = useState(initialCollapsed);
+  const narrow = useNarrow();
+  const pathname = usePathname();
+  // On a phone it's a strip of icons. Opened, it lies over the screen until the
+  // next page, and the choice isn't remembered: it's only for this one trip.
+  const [openedOn, setOpenedOn] = useState<string | null>(null);
+  const collapsed = narrow ? openedOn === null || openedOn !== pathname : stored;
   const change = (next: boolean) => {
-    setCollapsed(next);
+    if (narrow) {
+      setOpenedOn(next ? null : pathname);
+      return;
+    }
+    setStored(next);
     rememberPreference(SIDEBAR_COOKIE, next ? "collapsed" : "expanded");
   };
   const toggle = () => change(!collapsed);
@@ -44,11 +70,13 @@ export function SidebarFrame({
 
   return (
     <CollapsedContext value={{ collapsed, expand: () => change(false) }}>
+      {/* Holds the strip's place while the sidebar is fixed over the screen. */}
+      <div aria-hidden="true" className="w-12 shrink-0 md:hidden" />
       <aside
         data-collapsed={collapsed || undefined}
         className={cn(
-          "group/sidebar sticky top-0 flex h-screen shrink-0 flex-col self-start overflow-x-hidden overflow-y-auto border-r border-line bg-sidebar motion-safe:transition-[width] motion-safe:duration-200",
-          collapsed ? "w-12" : "w-[260px]",
+          "group/sidebar scrollbar-subtle top-0 flex h-screen shrink-0 flex-col self-start overflow-x-hidden overflow-y-auto border-r border-line bg-sidebar motion-safe:transition-[width] motion-safe:duration-200 max-md:fixed max-md:left-0 max-md:z-40 md:sticky",
+          collapsed ? "w-12" : "w-[260px] max-md:shadow-dialog",
         )}
       >
         <div

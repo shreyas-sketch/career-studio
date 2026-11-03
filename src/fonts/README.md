@@ -4,6 +4,7 @@ All fonts are licensed under the SIL Open Font License 1.1; each folder has its 
 
 | Folder | Family | Styles | Source file in [google/fonts](https://github.com/google/fonts) |
 | --- | --- | --- | --- |
+| `jost` | Jost | variable 100–900, Latin subset (from `@fontsource-variable/jost`); titles only, other scripts fall back to IBM Plex Sans | `ofl/jost/Jost[wght].ttf` |
 | `geist` | Geist | variable 100–900 | `ofl/geist/Geist[wght].ttf` |
 | `newsreader` | Newsreader | variable 200–800, optical size 6–72; roman and italic | `ofl/newsreader/Newsreader[opsz,wght].ttf`, `Newsreader-Italic[opsz,wght].ttf` |
 | `ibm-plex-sans` | IBM Plex Sans | variable 100–700, width 85–100 | `ofl/ibmplexsans/IBMPlexSans[wdth,wght].ttf` |

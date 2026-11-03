@@ -1,13 +1,15 @@
 "use client";
 
-import { AlertCircle, LoaderCircle, RotateCcw } from "lucide-react";
+import { AlertCircle, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { CrewGlyph } from "@/components/crew/shapes";
 import { toastResult } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { useJob } from "@/hooks/use-job";
 import { cn } from "@/lib/cn";
+import { CREW, jobRole } from "@/lib/crew/crew";
 import { retry } from "@/lib/jobs/actions";
 import type { JobView } from "@/lib/jobs/runner";
 
@@ -65,6 +67,7 @@ export function JobProgress({
     );
   }
 
+  const crew = jobRole(job.type)?.crew;
   return (
     <div
       role="status"
@@ -75,11 +78,13 @@ export function JobProgress({
         className,
       )}
     >
-      <span className="relative grid size-6 shrink-0 place-items-center">
-        <span aria-hidden="true" className="absolute inset-0 rounded-full bg-accent-soft motion-safe:animate-pulse-soft" />
-        <LoaderCircle size={15} aria-hidden="true" className="relative text-accent-text motion-safe:animate-spin" />
-      </span>
-      <span className="font-medium">{job.step ?? idleLabel}</span>
+      {crew ? (
+        <CrewGlyph id={crew} status={job.status === "QUEUED" ? "queued" : "working"} size={26} eye />
+      ) : (
+        <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-accent motion-safe:animate-pulse-soft" />
+      )}
+      {crew && <span className="font-serif text-[15px] font-medium">{CREW[crew].name}</span>}
+      <span className={crew ? "text-muted" : "font-medium"}>{job.step ?? idleLabel}</span>
       {job.status === "QUEUED" && <span className="text-muted">Waiting for a free slot…</span>}
     </div>
   );

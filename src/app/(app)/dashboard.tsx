@@ -1,15 +1,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { PageHeader } from "@/components/page-header";
+import { CrewGlyph } from "@/components/crew/shapes";
 import { buttonClassName } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
 import type { ApplicationStatus } from "@/generated/prisma/enums";
+import type { CrewId } from "@/lib/crew/crew";
 import { DASHBOARD_PERIODS, DEFAULT_QUIET_DAYS, type DashboardFigures, type DashboardPeriod } from "@/lib/dashboard";
 import type { DayPeriod } from "@/lib/greeting";
 import { STATUSES } from "@/lib/status";
 
 import { ActivityChart } from "./activity-chart";
+import { CrewHero } from "./crew-hero";
 import { FunnelChart } from "./funnel-chart";
 import { Greeting } from "./greeting";
 import { PeriodFilter, PeriodScoped } from "./period-filter";
@@ -27,6 +29,7 @@ export function Dashboard({
   quietDays = DEFAULT_QUIET_DAYS,
   empty,
   calendar,
+  scoutFinds = 0,
 }: {
   figures: DashboardFigures;
   firstName: string;
@@ -39,22 +42,24 @@ export function Dashboard({
   empty: boolean;
   /** The calendar (E15-6), which the time filter doesn't scope. */
   calendar?: ReactNode;
+  /** Postings the job agent found, waiting for a look. */
+  scoutFinds?: number;
 }) {
   const { sent, heardBack } = figures;
   // The summary follows the time filter, so it says which period it covers.
   const within = range === "all" ? null : DASHBOARD_PERIODS.find((entry) => entry.value === range)?.label.toLowerCase();
   return (
     <>
-      <PageHeader
+      <CrewHero
         title={<Greeting name={firstName} serverPeriod={period} />}
-        description={
+        standing={
           sent > 0
-            ? `${within ? `In the ${within} you've` : "You've"} sent ${plural(sent, "application", "applications")} and heard back from ${heardBack}. That's a solid run. Keep it going.`
+            ? `${within ? `In the ${within} you've` : "You've"} sent ${plural(sent, "application", "applications")} and heard back from ${heardBack}.`
             : within
-              ? `Nothing sent in the ${within}. Your next application is only a paste away.`
-              : "Nothing sent yet. Your first application is only a paste away."
+              ? `Nothing sent in the ${within}.`
+              : "Nothing sent yet."
         }
-        actions={
+        action={
           <Link href="/new?fresh=1" className={buttonClassName("primary", "md", "hover:text-on-primary")}>
             + New application
           </Link>
@@ -66,16 +71,18 @@ export function Dashboard({
           <Welcome />
         </Columns>
       ) : (
+        <>
+        <Desk items={figures.attention} quietDays={quietDays} scoutFinds={scoutFinds} />
         <PeriodFilter period={range}>
           <Columns calendar={calendar}>
             <PeriodScoped className="grid max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-start gap-5">
               <Funnel figures={figures} />
               <ActivityChart weeks={figures.weeks} />
               <WhereThingsStand byStatus={figures.byStatus} />
-              <WorthALook items={figures.attention} quietDays={quietDays} />
             </PeriodScoped>
           </Columns>
         </PeriodFilter>
+        </>
       )}
     </>
   );
@@ -87,7 +94,7 @@ export function Dashboard({
  */
 function Columns({ calendar, children }: { calendar?: ReactNode; children: ReactNode }) {
   return (
-    <div className="@container px-10 pb-[72px]">
+    <div className="@container px-10 pb-[72px] max-sm:px-4">
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 @min-[1240px]:grid-cols-[minmax(0,1200px)_400px]">
         {children}
         {calendar && <div className="min-w-0 @min-[780px]:max-w-[calc(50%-10px)] @min-[1240px]:max-w-none">{calendar}</div>}
@@ -160,34 +167,42 @@ function WhereThingsStand({ byStatus }: { byStatus: Record<ApplicationStatus, nu
   );
 }
 
-/** "Worth a look" (DSH-5): offers, drafts, quiet applications and interviews. */
-function WorthALook({ items, quietDays }: { items: DashboardFigures["attention"]; quietDays: number }) {
+/**
+ * "On your desk" (DSH-5): what the crew has handed over and is waiting on the
+ * user for: offers, drafts, quiet applications, interviews and the job agent's
+ * finds. Each slip is clipped by whoever it came from. Nothing goes on it to
+ * fill the space.
+ */
+function Desk({ items, quietDays, scoutFinds }: { items: DashboardFigures["attention"]; quietDays: number; scoutFinds: number }) {
+  const count = items.length + (scoutFinds > 0 ? 1 : 0);
   return (
-    <section aria-labelledby="attention-heading" className={`${card} px-7 pt-[26px] pb-3.5`}>
-      <div className="flex items-baseline justify-between gap-3 pb-3">
-        <h2 id="attention-heading" className="text-[15px] font-medium">
-          Worth a look
+    <section aria-labelledby="attention-heading" className="flex flex-col gap-5 px-10 pt-2 pb-12 max-sm:px-4">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 id="attention-heading" className="font-serif text-section">
+          On your desk
         </h2>
-        {items.length > 0 && <span className="text-meta text-muted">{plural(items.length, "thing", "things")}</span>}
+        {count > 0 && <span className="text-meta text-muted">{plural(count, "thing needs", "things need")} you</span>}
       </div>
-      {items.length === 0 ? (
-        <p className="border-t border-line py-5 text-sm text-muted">All caught up. Nice.</p>
+      {count === 0 ? (
+        <p className="text-sm text-muted">The crew isn&apos;t waiting on you for anything.</p>
       ) : (
-        <ul>
-          {items.map((item) => (
-            <li key={item.id} className="-mx-2.5 border-t border-line">
-              <Link href={`/applications/${item.id}${item.tab ? `?tab=${item.tab}` : ""}`} className="flex items-start gap-3 rounded-control px-2.5 py-[13px] text-ink hover:bg-hover">
-                <StatusDot status={item.status} className="mt-1.5" />
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-field font-medium">
-                    {[item.company, item.role].filter(Boolean).join(", ")}
-                    {item.soon && <span className="ml-2 rounded-[6px] bg-warning-surface px-2 py-[3px] align-[1px] text-xs font-normal text-warning">Soon</span>}
-                  </span>
-                  <span className="text-meta leading-[1.45] text-muted">{item.reason}</span>
-                </span>
-                <span className="mt-px flex-none text-meta text-muted">{item.action} →</span>
-              </Link>
-            </li>
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,270px),1fr))] gap-x-4 gap-y-6">
+          {scoutFinds > 0 && (
+            <Slip id="scout-finds" crew="scout" tilt={0} href="/agent" title={`${plural(scoutFinds, "posting", "postings")} found for you`} reason="Scored against your profile, the best first." action="Review" />
+          )}
+          {items.map((item, index) => (
+            <Slip
+              key={item.id}
+              id={item.id}
+              crew={item.status === "INTERVIEW" ? "usher" : "tailor"}
+              tilt={index + 1}
+              href={`/applications/${item.id}${item.tab ? `?tab=${item.tab}` : ""}`}
+              title={[item.company, item.role].filter(Boolean).join(", ")}
+              reason={item.reason}
+              action={item.action}
+              soon={item.soon}
+              status={item.status}
+            />
           ))}
         </ul>
       )}
@@ -196,11 +211,58 @@ function WorthALook({ items, quietDays }: { items: DashboardFigures["attention"]
   );
 }
 
+// Slips land a little crooked, and straighten when you reach for them.
+const TILTS = ["-0.9deg", "0.6deg", "-0.4deg", "1deg", "-0.7deg", "0.5deg"];
+
+function Slip({
+  id,
+  crew,
+  tilt,
+  href,
+  title,
+  reason,
+  action,
+  soon,
+  status,
+}: {
+  id: string;
+  crew: CrewId;
+  tilt: number;
+  href: string;
+  title: string;
+  reason: string;
+  action: string;
+  soon?: boolean;
+  status?: ApplicationStatus;
+}) {
+  return (
+    <li key={id} className="relative" style={{ rotate: TILTS[tilt % TILTS.length] }}>
+      <span className="absolute -top-3 right-4 z-10">
+        <CrewGlyph id={crew} size={30} eye />
+      </span>
+      <Link
+        href={href}
+        className="flex h-full flex-col gap-1 rounded-toast border border-line-card bg-card px-4 pt-4 pb-3 text-ink shadow-control hover:text-ink hover:shadow-toast motion-safe:transition-shadow"
+      >
+        <span className="flex items-center gap-2 pr-9 text-field leading-snug font-medium">
+          {status && <StatusDot status={status} />}
+          <span className="min-w-0">{title}</span>
+        </span>
+        <span className="flex-1 text-meta leading-[1.45] text-pretty text-muted">{reason}</span>
+        <span className="mt-1.5 flex items-center gap-2 text-meta font-medium">
+          <span className="underline underline-offset-3">{action}</span>
+          {soon && <span className="rounded-[4px] bg-warning-surface px-1.5 py-0.5 text-xs font-normal text-warning">Soon</span>}
+        </span>
+      </Link>
+    </li>
+  );
+}
+
 /** Before the first application: where to begin. */
 function Welcome() {
   return (
     <Panel>
-      <h2 className="font-serif text-section">Welcome to Dossier</h2>
+      <h2 className="font-serif text-section">Hand the crew something to work with</h2>
       <p className="text-sm text-muted">
         Start with your profile: your roles, skills and education are what every tailored resume and cover letter is built from.
         Then paste a job posting, and your funnel and next steps will show up here.

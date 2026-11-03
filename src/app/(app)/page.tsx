@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { countAgentQueue } from "@/lib/agent/view";
 import { periodFromParam } from "@/lib/dashboard";
 import { waitingByApplication } from "@/lib/google/inbox-data";
 import { loadDashboard } from "@/lib/dashboard-data";
@@ -26,9 +27,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const now = new Date();
   const range = periodFromParam(param) ?? settings.dashboardPeriod;
   const replies = await waitingByApplication().catch(() => undefined);
-  const [figures, name] = await Promise.all([
+  const [figures, name, scoutFinds] = await Promise.all([
     loadDashboard({ period: range, quietDays: settings.quietDays, timeZone, replies }),
     loadProfileName(),
+    countAgentQueue().catch(() => 0),
   ]);
   return (
     <Dashboard
@@ -38,6 +40,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
       range={range}
       quietDays={settings.quietDays}
       empty={figures.total === 0}
+      scoutFinds={scoutFinds}
       calendar={
         <Suspense fallback={<CalendarSkeleton />}>
           <DashboardCalendar date={date} now={now} />

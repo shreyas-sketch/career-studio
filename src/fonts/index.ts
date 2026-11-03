@@ -28,6 +28,14 @@ export const newsreader = localFont({
 // The remaining fonts are only used on some screens (code-like values, resume
 // themes), so they load when a page uses them instead of being preloaded.
 
+/** Career Studio's titles: geometric, of the same years as the mobile on its wall. */
+export const jost = localFont({
+  src: "./jost/Jost-Variable-Latin.woff2",
+  weight: "100 900",
+  variable: "--typeface-jost",
+  fallback: ["Futura", "Century Gothic", "Helvetica", "sans-serif"],
+});
+
 /** Career Studio's interface text. */
 export const plexSans = localFont({
   src: "./ibm-plex-sans/IBMPlexSans-Variable.woff2",
@@ -240,6 +248,7 @@ export const notoSansSc = localFont({
 export const fontVariables = [
   geist,
   newsreader,
+  jost,
   plexSans,
   plexMono,
   ebGaramond,

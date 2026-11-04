@@ -36,7 +36,7 @@ export default async function LoopsPage({ searchParams }: PageProps<"/loops">) {
       />
       <Screen wide>
         {!aiReady && <AiSetupNotice what="Round prep and practice" />}
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <Section title="Coming up" description="The next rounds across all your loops.">
             {upcoming.length === 0 ? (
               <EmptyState icon={<CalendarRange size={20} aria-hidden="true" />} title="No rounds scheduled">
@@ -73,7 +73,7 @@ export default async function LoopsPage({ searchParams }: PageProps<"/loops">) {
 
         {loops.length > 0 && (
           <Section title="Your loops">
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {loops.map((loop) => (
                 <li key={loop.id}>
                   <Link href={`/loops/${loop.id}`} className="flex h-full flex-col gap-3 rounded-card border border-line-card bg-card p-4 text-ink hover:border-line-strong hover:text-ink">

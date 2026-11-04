@@ -303,7 +303,7 @@ export function DataRow({
   return (
     <div className="flex flex-col gap-2 border-t border-line py-4 first:border-t-0">
       <div className="flex flex-wrap items-center gap-5">
-        <div className="flex min-w-[220px] flex-1 flex-col gap-[3px]">
+        <div className="flex min-w-[min(220px,100%)] flex-1 flex-col gap-[3px]">
           <h3 className="text-field">{title}</h3>
           <p className="text-meta text-muted">{description}</p>
         </div>

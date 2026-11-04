@@ -61,14 +61,14 @@ export function AnalysisView({ record, reference, jobId: initialJob, aiReady }: 
       <JobProgress jobId={jobId} idleLabel="Working…" onDone={() => setJobId(null)} />
 
       {analysis && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <Card className="flex flex-col gap-5 motion-safe:animate-rise-in">
             <div className="flex flex-wrap items-center gap-3">
               <Verdict verdict={analysis.suitability.verdict} />
               <FitMeter score={analysis.suitability.score} />
             </div>
             <p className="text-lead text-pretty">{analysis.summary}</p>
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2">
               <Points title="Why you fit" items={analysis.suitability.evidence} tone="good" />
               <Points title="Gaps" items={analysis.suitability.gaps} tone="gap" empty="None found." />
             </div>
@@ -161,7 +161,7 @@ export function AnalysisView({ record, reference, jobId: initialJob, aiReady }: 
 
       {analysis && (
         <>
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
             <Section title="Scope and milestones">
               <Card className="flex flex-col gap-4">
                 <Points title="Deliverables" items={analysis.scope.deliverables} />
@@ -232,7 +232,7 @@ export function AnalysisView({ record, reference, jobId: initialJob, aiReady }: 
               )}
               <div className="flex flex-wrap items-end gap-3">
                 <Textarea
-                  className="min-w-64 flex-1"
+                  className="min-w-[min(16rem,100%)] flex-1"
                   label="Anything to stress or leave out? (optional)"
                   rows={2}
                   value={instructions}
@@ -280,7 +280,7 @@ export function AnalysisView({ record, reference, jobId: initialJob, aiReady }: 
             <pre className="mt-2 max-h-80 overflow-auto rounded-control bg-surface p-3 font-sans text-meta whitespace-pre-wrap">{record.jobText}</pre>
           </details>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="text-meta text-muted" title="Estimated from the length of each prompt and answer: about four characters a token. Billed by your AI provider, not Upwork.">
             AI used: ~{((record.usage.analysisTokens ?? 0) + (record.usage.proposalTokens ?? 0)).toLocaleString()} tokens (estimate)
           </span>

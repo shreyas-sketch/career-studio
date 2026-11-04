@@ -38,7 +38,7 @@ export function SegmentedControl<T extends string>({
       orientation="horizontal"
       onValueChange={onValueChange as ((value: string) => void) | undefined}
       className={cn(
-        "inline-flex w-fit bg-track p-[3px]",
+        "inline-flex w-fit max-w-full flex-wrap bg-track p-[3px]",
         size === "md" ? "rounded-[10px]" : "rounded-[9px]",
         className,
       )}

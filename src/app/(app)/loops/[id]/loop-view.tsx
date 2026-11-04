@@ -52,7 +52,7 @@ export function LoopView({ loop, jobs, aiReady }: { loop: LoopData; jobs: Record
   const firstUpcoming = loop.rounds.find((round) => round.status === "UPCOMING")?.id;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="flex flex-col gap-4">
         {!loop.hasJobDescription && (
           <p className="rounded-card border border-line-card bg-card px-4 py-3 text-sm text-muted">
@@ -153,7 +153,7 @@ function Round({ round, index, count, jobId: initialJob, aiReady, startOpen }: {
 
         {open && (
           <div className="flex flex-col gap-6 border-t border-line px-5 py-5 motion-safe:animate-rise-in">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
               <Select label="Kind" defaultValue={round.kind} onChange={(event) => void save({ kind: event.target.value as Kind }).then(toastResult).then(() => router.refresh())}>
                 {(Object.keys(ROUND_KIND_LABELS) as Kind[]).map((kind) => (
                   <option key={kind} value={kind}>
@@ -266,7 +266,7 @@ function Prep({ prep }: { prep: RoundPrep }) {
       {prep.focus.length > 0 && (
         <div className="flex flex-col gap-3">
           <h4 className="text-label font-semibold tracking-wide text-muted uppercase">What they&apos;ll look for</h4>
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
             {prep.focus.map((item) => (
               <li key={item.area} className="flex flex-col gap-1 rounded-control bg-card p-3 text-sm">
                 <span className="font-medium">{item.area}</span>
@@ -289,7 +289,7 @@ function Prep({ prep }: { prep: RoundPrep }) {
           </ul>
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
         <Points title="Stories to have ready" items={prep.stories.map((story) => `${story.story}: ${story.useFor}`)} tone="good" />
         <Points title="Questions to ask them" items={prep.questionsToAsk} />
       </div>

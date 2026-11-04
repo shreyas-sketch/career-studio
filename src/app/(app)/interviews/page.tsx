@@ -27,7 +27,7 @@ export default async function InterviewsPage({ searchParams }: PageProps<"/inter
       />
       <Screen wide>
         {!aiReady && <AiSetupNotice what="Interview practice" />}
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
           <Section title="New session" description="Pick the role, or paste its job description. The interviewer plans questions around it and your profile.">
             <NewInterview applications={applications} preselect={preselect} disabled={!aiReady} />
           </Section>
@@ -66,7 +66,7 @@ export default async function InterviewsPage({ searchParams }: PageProps<"/inter
               Your first session takes about fifteen minutes for five questions. Answer as you would out loud; typing in full sentences gets the most useful feedback.
             </EmptyState>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
               {sessions.map((session) => (
                 <li key={session.id}>
                   <Link

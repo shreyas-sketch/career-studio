@@ -36,7 +36,7 @@ export function NewPlan({ applications, disabled, prefill }: { applications: App
           });
         }}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
           <Input label="Skill to develop" value={skill} onChange={(event) => setSkill(event.target.value)} placeholder="SQL for product analytics" />
           <Input label="Target role or kind of work" value={targetRole} onChange={(event) => setTargetRole(event.target.value)} placeholder="Product analyst" />
         </div>

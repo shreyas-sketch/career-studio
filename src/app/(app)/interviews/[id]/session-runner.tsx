@@ -180,7 +180,7 @@ function Feedback({ feedback }: { feedback: AnswerFeedback }) {
       <p className="text-sm text-pretty">{feedback.summary}</p>
       {open && (
         <div className="flex flex-col gap-4 motion-safe:animate-rise-in">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
             <Points title="What worked" items={feedback.strengths} tone="good" />
             <Points title="What was missing" items={feedback.gaps} tone="gap" />
           </div>
@@ -323,7 +323,7 @@ function Report({ report, sessionId, applicationId, role }: { report: InterviewR
         </div>
       </div>
       {report.competencies.length > 0 && (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
           {report.competencies.map((item) => (
             <li key={item.competency} className="flex flex-col gap-1.5 rounded-control bg-surface p-3">
               <span className="flex items-center justify-between gap-2 text-sm font-medium">
@@ -335,7 +335,7 @@ function Report({ report, sessionId, applicationId, role }: { report: InterviewR
           ))}
         </ul>
       )}
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-3">
         <Points title="Strengths" items={report.strengths} tone="good" />
         <Points title="Came up more than once" items={report.recurringWeaknesses} tone="gap" />
         <Points title="Practise next" items={report.practiceNext} />

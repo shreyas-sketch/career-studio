@@ -38,7 +38,7 @@ export function AiBehaviour({ initial }: { initial: Behaviour }) {
   return (
     <Card padding="none" className="flex flex-col px-7 pt-1.5 pb-2.5">
       <div className="flex flex-wrap items-center gap-5 py-4">
-        <div className="flex min-w-[220px] flex-1 flex-col gap-[3px]">
+        <div className="flex min-w-[min(220px,100%)] flex-1 flex-col gap-[3px]">
           <span id="creativity-label" className="text-field">
             Creativity
           </span>

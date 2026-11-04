@@ -62,7 +62,7 @@ export function FreelanceBoard({
   const [editing, setEditing] = useState(!prefs.services && prefs.keywords.length === 0);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <nav aria-label="Show" className="flex flex-wrap gap-2">
@@ -186,7 +186,7 @@ function OpportunityCard({ opportunity, aiReady }: { opportunity: Opportunity; a
         </div>
 
         {opportunity.fit && (
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-3">
             <Points title="Why it fits" items={opportunity.fit.reasons} tone="good" />
             <Points title="Gaps" items={opportunity.fit.gaps} tone="gap" />
             <Points title="Concerns" items={opportunity.fit.concerns} tone="risk" />

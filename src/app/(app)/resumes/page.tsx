@@ -25,7 +25,7 @@ export default async function ResumesPage() {
       />
       <Screen wide>
         {thin && (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
             <Link href="/resumes/start" className="flex gap-4 rounded-panel border border-accent/40 bg-card p-5 text-ink hover:border-accent hover:text-ink">
               <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-text">
                 <Wand2 size={18} aria-hidden="true" />
@@ -47,9 +47,9 @@ export default async function ResumesPage() {
           </div>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <Section title="Your resumes">
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
               <li>
                 <Link href="/resume" className="flex h-full flex-col gap-2 rounded-card border border-line-card bg-card p-4 text-ink hover:border-line-strong hover:text-ink">
                   <span className="flex items-center gap-2 font-medium">

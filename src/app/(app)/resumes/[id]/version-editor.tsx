@@ -122,7 +122,7 @@ export function VersionEditor({
           <ResumeDocument theme={theme} profile={profile} paper={paper} units={units} language={language} includeReferences={includeReferences} />
         </DocumentPreview>
 
-        <aside aria-label="Edit this resume" className="flex flex-[1_0_360px] flex-col border-t border-line bg-paper px-6 pt-6 pb-12 @min-[860px]:max-w-[480px] @min-[860px]:border-t-0 @min-[860px]:border-l">
+        <aside aria-label="Edit this resume" className="flex min-w-0 flex-[1_1_360px] flex-col border-t border-line bg-paper px-6 pt-6 pb-12 @min-[860px]:max-w-[480px] @min-[860px]:border-t-0 @min-[860px]:border-l">
           <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="flex flex-col gap-5">
             <TabsList variant="segmented">
               <TabsTrigger value="edit" title="Edit">

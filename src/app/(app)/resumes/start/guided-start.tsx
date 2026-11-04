@@ -46,7 +46,7 @@ export function GuidedStart({ disabled }: { disabled: boolean }) {
           {roles.map((role, index) => (
             <fieldset key={index} className="flex flex-col gap-3 rounded-card border border-line-card p-4">
               <legend className="px-1 text-label text-muted">Role {index + 1}</legend>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
                 <Input label="Title" value={role.role} onChange={(event) => setRole(index, { role: event.target.value })} />
                 <Input label="Where" value={role.company} onChange={(event) => setRole(index, { company: event.target.value })} />
                 <Input label="When" value={role.dates} onChange={(event) => setRole(index, { dates: event.target.value })} placeholder="Mar 2023 – now" />

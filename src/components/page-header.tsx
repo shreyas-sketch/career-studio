@@ -23,9 +23,9 @@ export function PageHeader({ title, description, actions, before }: PageHeaderPr
       <PageBar>
         <div className="flex min-w-0 items-center gap-3">
           {before ?? <PageBarIcon />}
-          <h1 className="font-serif text-title text-pretty">{title}</h1>
+          <h1 className="font-serif text-title text-pretty max-sm:text-[28px]">{title}</h1>
         </div>
-        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2 max-sm:min-w-0 max-sm:shrink">{actions}</div>}
       </PageBar>
       {/* The screen's content starts 32px under the bar, after the description if there is one. */}
       {description ? (

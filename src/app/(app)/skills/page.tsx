@@ -26,7 +26,7 @@ export default async function SkillsPage({ searchParams }: PageProps<"/skills">)
       />
       <Screen wide>
         {!aiReady && <AiSetupNotice what="Skill planning" />}
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           <Section title="New plan">
             <NewPlan applications={applications} disabled={!aiReady} prefill={{ skill: text("skill"), role: text("role"), applicationId: text("application") }} />
           </Section>

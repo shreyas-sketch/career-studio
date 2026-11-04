@@ -33,7 +33,7 @@ export function NumbersFields({ value, onChange, onBlur }: { value: Numbers; onC
     />
   );
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-3">
       {field("connectsRequired", "Connects this job needs", "Shown on the job post, next to Apply.")}
       {field("boostConnects", "Connects to boost (optional)", "0 for no boost.")}
       {field("connectsBalance", "Connects you have", "Optional: to warn when you're short.")}

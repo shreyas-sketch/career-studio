@@ -49,7 +49,7 @@ export function PlanView({ plan, jobId: initialJob, aiReady }: { plan: PlanData;
       <JobProgress jobId={jobId} idleLabel="Planning…" onDone={() => setJobId(null)} />
 
       {assessment && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <Card className="flex flex-col gap-5 motion-safe:animate-rise-in">
             <span className="text-label font-semibold tracking-wide text-accent-text uppercase">Where you stand</span>
             <p className="text-lead text-pretty">{assessment.summary}</p>
@@ -61,7 +61,7 @@ export function PlanView({ plan, jobId: initialJob, aiReady }: { plan: PlanData;
               </div>
               <span className="text-sm font-medium">{READINESS_LABELS[assessment.readiness]}</span>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <h3 className="text-label font-semibold tracking-wide text-muted uppercase">Your strengths here</h3>
                 <ul className="flex flex-col gap-2">
@@ -173,7 +173,7 @@ export function PlanView({ plan, jobId: initialJob, aiReady }: { plan: PlanData;
             </ol>
           </Section>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
             <Card className="flex flex-col gap-3">
               <span className="text-label font-semibold tracking-wide text-accent-text uppercase">Portfolio piece</span>
               <h3 className="font-serif text-xl">{content.project.title}</h3>

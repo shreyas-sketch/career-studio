@@ -25,7 +25,7 @@ export function SettingsScreen({ section, children }: { section: SettingsSection
         description="Your AI provider and key, job sources, document defaults, connections and your data. Everything here applies to your account only."
         actions={<SavedIndicator status={saves.status} savedAt={saves.savedAt} />}
       />
-      <div className="flex flex-wrap items-start gap-x-12 gap-y-8 px-10 pb-20">
+      <div className="flex flex-wrap items-start gap-x-12 gap-y-8 px-10 pb-20 max-sm:px-4">
         <nav aria-label="Settings sections" className="flex max-w-[220px] min-w-[200px] flex-[1_1_200px] flex-col gap-0.5">
           {SETTINGS_SECTIONS.map((entry) => (
             <Link

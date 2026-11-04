@@ -27,7 +27,7 @@ export default async function UpworkPage({ searchParams }: PageProps<"/upwork">)
       />
       <Screen wide>
         {!aiReady && <AiSetupNotice what="The Upwork analyst" />}
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <Section title="Analyse a job">
             <NewAnalysis
               disabled={!aiReady}
@@ -59,7 +59,7 @@ export default async function UpworkPage({ searchParams }: PageProps<"/upwork">)
               Copy a job post from Upwork, everything from the title to the client&apos;s details, and paste it above. Your Upwork account isn&apos;t needed, and nothing is sent to Upwork.
             </EmptyState>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {analyses.map((analysis) => (
                 <li key={analysis.id}>
                   <Link href={`/upwork/${analysis.id}`} className="flex h-full flex-col gap-2 rounded-card border border-line-card bg-card p-4 text-ink hover:border-line-strong hover:text-ink">

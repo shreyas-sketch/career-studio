@@ -43,7 +43,7 @@ export function NewInterview({ applications, preselect, disabled, roundId = null
           });
         }}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
           <Input label="Role" value={role} onChange={(event) => setRole(event.target.value)} placeholder="Senior product designer" />
           <Input label="Company" value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Optional" />
         </div>
@@ -71,13 +71,13 @@ export function NewInterview({ applications, preselect, disabled, roundId = null
           </div>
           <label className="flex flex-col gap-2">
             <span className="text-label text-muted">Main questions</span>
-            <span className="flex items-center gap-3">
+            <span className="flex flex-wrap items-center gap-3">
               <input type="range" min={2} max={10} value={questions} onChange={(event) => setQuestions(Number(event.target.value))} className="w-36 accent-[var(--color-primary)]" />
               <span className="w-6 text-sm font-semibold tabular-nums">{questions}</span>
             </span>
           </label>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="lg" disabled={pending || disabled}>
             {pending ? "Setting up…" : "Start practising"}
           </Button>

@@ -52,11 +52,11 @@ export function NewLoop({ applications, preselect }: { applications: Application
           onTextChange={setJobDescription}
           hint="Optional, but prep is much better with it."
         />
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
           <Input label="Company" value={company} onChange={(event) => setCompany(event.target.value)} />
           <Input label="Role" value={role} onChange={(event) => setRole(event.target.value)} />
         </div>
-        <fieldset className="flex flex-col gap-2">
+        <fieldset className="flex min-w-0 flex-col gap-2">
           <legend className="mb-1 text-label text-muted">Rounds they&apos;ve mentioned (you can change them later)</legend>
           <div className="flex flex-wrap gap-2">
             {(Object.keys(ROUND_KIND_LABELS) as Kind[]).map((kind) => (

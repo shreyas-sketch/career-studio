@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { Prisma } from "@/generated/prisma/client";
 import { getAiProvider } from "@/lib/ai";
+import { ActionError } from "@/lib/action";
 import { writeSkillPlan } from "@/lib/ai/tasks/career/skill-plan";
 import { loadTaskOptions } from "@/lib/ai/task-options";
 import { assessmentSchema, planProgress, progressSchema, skillPlanSchema } from "@/lib/career/skill-plan-data";
@@ -56,9 +57,12 @@ export const skillPlanJob = defineJob({
       { targetRole: record.targetRole, jobDescription: record.jobDescription, skill: record.skill, hoursPerWeek: record.hoursPerWeek, weeks: record.weeks, context: record.context, profile },
       { ...options, signal },
     );
+    // Steps a rewrite kept stay ticked; ticks for steps that are gone would count against nothing.
+    const stepIds = new Set(data.plan.phases.flatMap((phase) => phase.steps.map((planStep) => planStep.id)));
+    const progress = progressSchema.parse(record.progress).filter((stepId) => stepIds.has(stepId));
     await prisma.skillPlan.update({
       where: { id },
-      data: { assessment: data.assessment as Prisma.InputJsonValue, plan: data.plan as Prisma.InputJsonValue, writtenWith: promptVersion },
+      data: { assessment: data.assessment as Prisma.InputJsonValue, plan: data.plan as Prisma.InputJsonValue, progress, writtenWith: promptVersion },
     });
     return { done: true };
   },
@@ -67,7 +71,9 @@ export const skillPlanJob = defineJob({
 /** Marks a step done or not done. */
 export async function setStepDone(id: string, stepId: string, done: boolean): Promise<string[]> {
   return prisma.$transaction(async (tx) => {
-    const record = await tx.skillPlan.findUniqueOrThrow({ where: { id }, select: { progress: true } });
+    const record = await tx.skillPlan.findUniqueOrThrow({ where: { id }, select: { progress: true, plan: true } });
+    const plan = record.plan ? skillPlanSchema.parse(record.plan) : null;
+    if (!plan?.phases.some((phase) => phase.steps.some((step) => step.id === stepId))) throw new ActionError("That step is no longer in this plan. Reload the page to see the current one.");
     const current = progressSchema.parse(record.progress);
     const next = done ? [...current, stepId] : current.filter((value) => value !== stepId);
     const progress = progressSchema.parse(next);

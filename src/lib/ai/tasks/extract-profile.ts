@@ -2,12 +2,14 @@ import { z } from "zod";
 
 import { LanguageLevel } from "@/generated/prisma/enums";
 import { citationExcerpt, escapeMarks, publicationLink } from "@/lib/citation";
-import { BASICS_FIELDS, sameName } from "@/lib/profile";
+import { BASICS_FIELDS, sameName, sameSkill } from "@/lib/profile";
 import { importedProfileSchema, type ImportedProfile } from "@/lib/profile-import";
+
+import { LINKS_HEADING } from "@/lib/resume-links";
 
 import { system, type Task } from "./prompt-parts";
 
-export const EXTRACT_PROFILE_VERSION = "extract-profile@4";
+export const EXTRACT_PROFILE_VERSION = "extract-profile@5";
 
 // What the model returns; code checks every part of it (E4-10).
 const text = z.string().nullable();
@@ -54,7 +56,11 @@ Take everything only from the resume: never add, guess or improve facts. Use nul
 - education: every degree, course or certificate, with the same dates, and notes (grade, focus, thesis) if given.
 - publications: every paper, article, book or chapter the resume lists as the candidate's publications, in its order. citation: the whole entry exactly as the resume writes it, word for word, without its link; link: its DOI or web address if given.
 - references: only people the resume names as references, with how they know the candidate (relation), their company, email and phone.
-Keep the resume's language; don't translate.`;
+Keep the resume's language; don't translate.
+
+Locations: city holds the city with its state or region as the resume writes them ("Mumbai, Maharashtra"); country only the country.
+Projects: keep what a project was for (a course, client or employer) as its first bullet when the resume says.
+The text can end with a list of links from the file, which are hyperlinks behind words in it. Use one for linkedin, website or a project's link only when its address clearly belongs there; otherwise leave that field empty. Never make an address up.`;
 
 /** The resume's text, marked as material to read rather than instructions to follow. */
 function resumeForPrompt(resume: string): string {
@@ -102,9 +108,16 @@ export function checkedProfile(answer: z.infer<typeof answerSchema>, resume: str
     };
   };
 
+  const links = linksIn(resume);
+  /** An address the file really holds, as a whole; a model's guess reads as nothing. */
+  const realLink = (value: string | null | undefined) => {
+    const link = clean(value);
+    return link && inResume(link) ? link : "";
+  };
+
   const basics: ImportedProfile["basics"] = {};
   for (const field of BASICS_FIELDS) {
-    const value = clean(answer.basics[field]);
+    const value = field === "linkedin" || field === "website" ? realLink(answer.basics[field]) : clean(answer.basics[field]);
     if (!value) continue;
     if (field === "dob" && !(/^\d{4}-\d{2}-\d{2}$/.test(value) && z.iso.date().safeParse(value).success)) continue;
     basics[field] = value;
@@ -114,8 +127,8 @@ export function checkedProfile(answer: z.infer<typeof answerSchema>, resume: str
   const skillNames: string[] = [];
   const addSkill = (name: string) => {
     const trimmed = name.trim().slice(0, 100);
-    if (trimmed && !skillNames.some((known) => sameName(known, trimmed))) skillNames.push(trimmed);
-    return skillNames.find((known) => sameName(known, trimmed));
+    if (trimmed && !skillNames.some((known) => sameSkill(known, trimmed))) skillNames.push(trimmed);
+    return skillNames.find((known) => sameSkill(known, trimmed));
   };
   answer.skills.forEach(addSkill);
 
@@ -136,15 +149,26 @@ export function checkedProfile(answer: z.infer<typeof answerSchema>, resume: str
     .filter((entry) => clean(entry.name))
     .map((entry) => ({
       name: clean(entry.name),
-      link: clean(entry.link),
+      link: realLink(entry.link) || links.find((link) => linkNames(link, clean(entry.name))) || "",
       bullets: entry.bullets.map((line) => line.replace(/^[-•*·▪]\s*/, "").trim()).filter(Boolean).join("\n"),
       skills: [...new Set(entry.skills.flatMap((name) => addSkill(name) ?? []))],
       ...span(entry),
       unverified: missing(clean(entry.name)),
     }));
 
+  basics.linkedin ??= links.find((link) => LINKEDIN_PROFILE.test(link));
+  if (!basics.website) {
+    const used = new Set(projects.map((entry) => entry.link));
+    basics.website = links.find((link) => !LINKEDIN_PROFILE.test(link) && !used.has(link) && !/linkedin\.com/i.test(link) && PROFILE_PAGE.test(link));
+  }
+  if (!basics.linkedin) delete basics.linkedin;
+  if (!basics.website) delete basics.website;
+  if (basics.city) basics.city = withRegion(basics.city, basics.country ?? "", resume);
+  const placed = new Set([basics.linkedin, basics.website, ...projects.map((entry) => entry.link)]);
+
   return importedProfileSchema.parse({
     basics,
+    otherLinks: links.filter((link) => !placed.has(link)),
     skills: skillNames.map((name) => ({ name, found: inResume(name) })),
     languages: answer.languages
       .filter((language) => clean(language.name))
@@ -183,6 +207,41 @@ export function checkedProfile(answer: z.infer<typeof answerSchema>, resume: str
         unverified: missing(clean(entry.name)),
       })),
   });
+}
+
+/** Links the file keeps behind its words, from the section resumeText adds. */
+function linksIn(resume: string): string[] {
+  const at = resume.lastIndexOf(LINKS_HEADING);
+  if (at === -1) return [];
+  return resume
+    .slice(at + LINKS_HEADING.length)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^https?:\/\//i.test(line));
+}
+
+const LINKEDIN_PROFILE = /linkedin\.com\/in\//i;
+/** A person's own page: a site's front page, or one name on a code host such as github.com/ada. */
+const PROFILE_PAGE = /^https?:\/\/(?:[^/]+\/?|(?:www\.)?(?:github|gitlab)\.com\/[^/]+\/?)$/i;
+
+/** A link to a project by its name: github.com/ada/fraud-detector for "Fraud Detector". */
+function linkNames(link: string, name: string): boolean {
+  const compact = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const wanted = compact(name);
+  if (wanted.length < 4) return false;
+  try {
+    return compact(new URL(link).pathname).includes(wanted);
+  } catch {
+    return false;
+  }
+}
+
+/** "Mumbai" from "Mumbai, Maharashtra, India": the state or region the file writes after a city, when it isn't the country. */
+function withRegion(city: string, country: string, resume: string): string {
+  if (city.includes(",")) return city;
+  const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const region = new RegExp(`\\b${escaped},[ \\t]*(\\p{Lu}[\\p{L}.' -]{1,30})(?=[,|·•\\n]|$)`, "mu").exec(resume)?.[1]?.trim();
+  return region && !sameName(region, country) && !/\d/.test(region) ? `${city}, ${region}` : city;
 }
 
 /** Lower case, letters and digits only: "Acme Payments, Inc." and "acme payments inc" compare equal. */

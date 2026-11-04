@@ -142,7 +142,7 @@ test("searches FreeHire, which needs no key and has no radius", async ({ page })
     expect.poll(async () => (await sql<{ value: string }>(`SELECT value FROM "Setting" WHERE key = 'jobSource'`))[0]?.value).toContain(source);
   await page.goto("/settings?section=jobs");
   await page.getByRole("radio", { name: "FreeHire" }).click();
-  await expect(page.getByText("No key needed. Dossier searches FreeHire's public catalogue at freehire.me.")).toBeVisible();
+  await expect(page.getByText("No key needed. Career Studio searches FreeHire's public catalogue at freehire.me.")).toBeVisible();
   await chosen("FREEHIRE");
 
   await page.goto("/jobs?q=product+designer&where=Rotterdam&country=nl");

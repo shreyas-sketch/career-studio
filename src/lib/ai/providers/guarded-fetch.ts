@@ -28,7 +28,7 @@ export async function assertPublicAiUrl(url: URL): Promise<void> {
 const MAX_REDIRECTS = 3;
 
 export const REDIRECT_REFUSED =
-  "The AI server sent the request to another address. Dossier won't send your API key there: put that address in Settings → AI provider instead.";
+  "The AI server sent the request to another address. Career Studio won't send your API key there: put that address in Settings → AI provider instead.";
 
 /**
  * A fetch for requests that carry an API key (E11-5): the AI server's address

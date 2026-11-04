@@ -115,3 +115,53 @@ describe("Hacker News' Who is hiring? (#222)", () => {
     await expect(fetchHnStartups(berlin)).rejects.toThrow("changed its format");
   });
 });
+
+describe("reading a hiring post's heading, in any order (QA, November 2026)", () => {
+  const anywhere = placeOf({ city: "", country: "" });
+  const mumbai = placeOf({ city: "Mumbai", country: "India" });
+  const post = (heading: string, body = "We build things.") => ({ id: 1, text: `<p>${heading}</p><p>${body}</p>`, created_at: "2026-11-01T00:00:00Z" });
+
+  it.each([
+    ["Cologne, Germany | UMH | Product Engineer | Onsite, partly remote", "UMH"],
+    ["UMH | Product Engineer | Cologne, Germany", "UMH"],
+    ["Product Engineer | UMH | Cologne, Germany", "UMH"],
+    ["India | Acme Payments | Software Engineer | Remote", "Acme Payments"],
+    ["Senior Developer | Remote | Full-time | Tiller", "Tiller"],
+    ["Tiller (YC W24) | Founding Engineer | Remote", "Tiller"],
+    ["Developer Tools Inc | Backend Engineer | SF", "Developer Tools Inc"],
+    ["$120k | Fieldnote | Designer | Berlin", "Fieldnote"],
+  ])("finds the company in %s", (heading, company) => {
+    expect(startupFromHnPost(post(heading), anywhere)?.company).toBe(company);
+  });
+
+  it.each(["India | Software Engineer", "Software Engineer", "SEEKING FREELANCER | Remote", "Berlin, Germany | Designer"])("won't call a place, role or label a company: %s", (heading) => {
+    expect(startupFromHnPost(post(heading), anywhere)?.company).toBe("Company not named");
+  });
+
+  it("falls back on the site's address", () => {
+    expect(startupFromHnPost(post("Software Engineer | Remote", 'See <a href="https://www.tiller.dev/jobs">our page</a>'), anywhere)?.company).toBe("tiller.dev");
+  });
+
+  it("keeps the example from QA as what it is", () => {
+    const umh = startupFromHnPost(post("Cologne, Germany | UMH | Product Engineer | Onsite, partly remote"), anywhere);
+    expect(umh).toMatchObject({ company: "UMH", remote: false, roles: ["Product Engineer"] });
+    expect(umh?.location).toContain("Cologne, Germany");
+    expect(umh?.location).toContain("partly remote");
+  });
+
+  it("doesn't offer an onsite or partly remote job elsewhere", () => {
+    expect(startupFromHnPost(post("Cologne, Germany | UMH | Product Engineer | Onsite, partly remote"), mumbai)).toBeNull();
+    expect(startupFromHnPost(post("Cologne, Germany | UMH | Engineer | Hybrid"), mumbai)).toBeNull();
+    expect(startupFromHnPost(post("UMH | Engineer | Onsite in Cologne, no remote"), mumbai)).toBeNull();
+  });
+
+  it("does offer it where it is", () => {
+    expect(startupFromHnPost(post("Cologne, Germany | UMH | Product Engineer | Hybrid"), berlin)?.company).toBe("UMH");
+  });
+
+  it("tells open, restricted and worldwide remote apart", () => {
+    expect(startupFromHnPost(post("Tiller | Engineer | Remote (worldwide)"), mumbai)?.remote).toBe(true);
+    expect(startupFromHnPost(post("Tiller | Engineer | Remote (US only)"), mumbai)).toBeNull();
+    expect(startupFromHnPost(post("Tiller | Engineer | Remote (India)"), mumbai)?.remote).toBe(true);
+  });
+});

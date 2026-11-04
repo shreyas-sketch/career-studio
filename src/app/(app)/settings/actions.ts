@@ -207,7 +207,7 @@ export const testJev = action(z.object({}), async () => {
   const started = performance.now();
   try {
     const { model } = await askJev(
-      { state: "Dossier is checking that it can reach Jev.", questions: { check: { type: "noul", instructions: "Is this text about checking a connection?" } } },
+      { state: "Career Studio is checking that it can reach Jev.", questions: { check: { type: "noul", instructions: "Is this text about checking a connection?" } } },
       { key: jev.key, timeoutMs: TEST_TIMEOUT_MS, retryDelaysMs: [] },
     );
     return { connected: true as const, model, seconds: Math.round((performance.now() - started) / 100) / 10 };
@@ -341,7 +341,7 @@ export const setConnector = action(z.object({ on: z.boolean() }), async ({ on })
 export const disconnectApps = action(z.object({}), async (_input, { toast }) => {
   if (!(await loadSettings()).connectorEnabledAt) throw new ActionError("The MCP connector is off already.");
   await saveSettings({ connectorEnabledAt: new Date().toISOString() });
-  toast("Every app is disconnected. Connect again from an app to use Dossier there.");
+  toast("Every app is disconnected. Connect again from an app to use Career Studio there.");
   return null;
 });
 

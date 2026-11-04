@@ -31,16 +31,16 @@ const extracted = {
 describe("readPostingJob (E7-2)", () => {
   it("reads the posting, then compares it with the profile, naming each step", async () => {
     provider.current = new MockProvider({
-      reply: (call) => (call.json?.name === "extracted_posting" ? extracted : { matches: [{ requirement: 0, skill: "Figma", language: null }] }),
+      reply: (call) => (call.json?.name === "extracted_posting" ? extracted : { matches: [{ requirement: 0, skill: "Figma", language: null, strength: "direct", evidence: [] }] }),
     });
     const steps: string[] = [];
     const result = await readPostingJob.run({ posting: "Ledgerly is hiring…" }, { id: "test-job", step: async (name) => void steps.push(name), signal: new AbortController().signal });
     expect(steps).toEqual([...READ_POSTING_STEPS]);
     expect(result).toMatchObject({
       extracted: { company: "Ledgerly", title: "Senior Product Designer · Ledgerly" },
-      extractedWith: "extract-posting@2",
+      extractedWith: "extract-posting@3",
       match: { items: [{ requirement: "Strong prototyping skills in Figma", result: "covered", experienceIds: ["e2"] }] },
-      matchedWith: "match-requirements@1",
+      matchedWith: "match-requirements@2",
     });
     expect(demoProfile().experience[1].id).toBe("e2");
   });

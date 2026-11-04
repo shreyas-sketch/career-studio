@@ -66,7 +66,7 @@ describe("extractPosting", () => {
   it("reads the posting as data and returns typed requirements with an ISO deadline (NEW-3)", async () => {
     const provider = model({ ...extracted, title: null, deadline: "15 October 2026", requirements: [...extracted.requirements, { text: " ", kind: "other", skill: null, years: null, language: null }] });
     const { data, promptVersion } = await extractPosting(provider, { posting: sample.ledgerly.posting, today }, options);
-    expect(promptVersion).toBe("extract-posting@2");
+    expect(promptVersion).toBe("extract-posting@3");
     expect(data).toMatchObject({ title: "Senior Product Designer · Ledgerly", deadline: "2026-10-15", asksForReferences: false, language: "English" });
     expect(data.requirements).toHaveLength(7);
     expect(sent(provider).messages[0].content).toMatch(/^<posting>\nLedgerly: Senior Product Designer/);
@@ -128,15 +128,15 @@ describe("matchRequirements", () => {
   it("classifies in code: covered with the roles as evidence, partial, gap (NEW-4)", async () => {
     const provider = model(answer);
     const { data, promptVersion } = await matchRequirements(provider, { requirements: extracted.requirements, profile, today }, options);
-    expect(promptVersion).toBe("match-requirements@1");
+    expect(promptVersion).toBe("match-requirements@2");
     expect(sent(provider).effort).toBe("low");
     expect(data.items.map((item) => [item.requirement, item.result, item.note])).toEqual([
-      ["5+ years of product design", "covered", "3 roles in your profile, since Sep 2015"],
+      ["5+ years of product design", "covered", expect.stringMatching(/^3 roles in your profile, since Sep 2015 \(about \d+ years\)$/)],
       ["Has built or maintained a design system", "covered", "Used at Northwind Logistics"],
       ["Runs user research independently", "covered", "Used at Northwind Logistics, Fieldnote"],
       ["Strong prototyping skills in Figma", "covered", "Used at Fieldnote"],
       ["Accessibility know-how (WCAG 2.2)", "gap", "Not in your profile yet"],
-      ["Experience with payments or fintech", "gap", "Nothing in your profile, so I'll address it honestly in the letter"],
+      ["Experience with payments or fintech", "gap", "Your profile doesn't mention this. Add it if it applies."],
       ["Dutch is a plus", "covered", "Dutch: Native"],
     ]);
     expect(data.items[1]).toMatchObject({ skill: "Design systems", experienceIds: ["e1"] });
@@ -170,7 +170,7 @@ describe("matchRequirements", () => {
     const provider = model({});
     const { data } = await matchRequirements(provider, { requirements: [{ ...extracted.requirements[0], years: 15 }], profile, today }, options);
     expect(provider.calls).toHaveLength(0);
-    expect(data.items[0]).toMatchObject({ result: "gap", note: "3 roles in your profile, since Sep 2015 (about 11 years)" });
+    expect(data.items[0]).toMatchObject({ result: "gap", basis: "unmet", note: "3 roles in your profile, since Sep 2015 (about 11 years; this asks for 15)" });
     expect(experienceMonths(profile, today)).toBe(133);
   });
 });
@@ -311,7 +311,7 @@ describe("writeCoverLetter", () => {
   it("returns the recipient, greeting, paragraphs and the tone's sign-off for an English letter (APP-10, E8-11)", async () => {
     const provider = model(answer);
     const { data, promptVersion } = await writeCoverLetter(provider, { profile, extracted, match, tone: "FORMAL", facts: [], posting }, options);
-    expect(promptVersion).toBe("write-cover-letter@5");
+    expect(promptVersion).toBe("write-cover-letter@6");
     expect(data).toEqual([
       { id: "recipient", label: "Recipient", text: "Ledgerly · Hiring team\nAmsterdam" },
       { id: "greeting", label: "Greeting", text: "Dear Ledgerly team," },
@@ -324,7 +324,7 @@ describe("writeCoverLetter", () => {
     // It says what the resume can't, rather than repeating it.
     expect(sent(provider).system).toContain(COVER_LETTER_APPROACH);
     // Gaps go along, so the letter can acknowledge them honestly.
-    expect(prompt(provider)).toMatch(/"inProfile": "gap"/);
+    expect(prompt(provider)).toMatch(/"inProfile": "not shown"/);
   });
 
   it("leaves out a recipient or greeting the model left empty, for the English ones to fill in", async () => {

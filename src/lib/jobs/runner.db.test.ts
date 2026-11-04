@@ -66,6 +66,21 @@ beforeEach(async () => {
 afterAll(() => prisma().$disconnect());
 
 describe("the job runner", () => {
+  it("answers a second click with the job under way, and starts anew once it's over", async () => {
+    const first = await startJob(gated, { name: "Twice", fail: "no" }, { key: "double:1" });
+    expect(await startJob(gated, { name: "Twice", fail: "no" }, { key: "double:1" })).toBe(first);
+    expect(await prisma().job.count({ where: { key: "double:1" } })).toBe(1);
+
+    await eventually(async () => (await status(first)).toBe("RUNNING"));
+    await release("Twice");
+    await eventually(async () => (await status(first)).toBe("DONE"));
+    const again = await startJob(gated, { name: "Twice", fail: "no" }, { key: "double:1" });
+    expect(again).not.toBe(first);
+    await eventually(async () => (await status(again)).toBe("RUNNING"));
+    await release("Twice");
+    await eventually(async () => (await status(again)).toBe("DONE"));
+  });
+
   it("runs a job in the background with named steps and keeps its result (E6-7)", async () => {
     const seen: string[] = [];
     const id = await startJob(gated, { name: "Jane", fail: "no" }, { key: "application:1" });
@@ -168,6 +183,6 @@ describe("the job runner", () => {
       ],
     });
     expect(await recoverInterruptedJobs()).toBe(2);
-    expect(await prisma().job.count({ where: { status: "FAILED", error: "Dossier restarted before this finished. Try again." } })).toBe(2);
+    expect(await prisma().job.count({ where: { status: "FAILED", error: "Career Studio restarted before this finished. Try again." } })).toBe(2);
   });
 });

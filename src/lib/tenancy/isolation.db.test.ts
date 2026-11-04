@@ -35,7 +35,7 @@ afterAll(async () => {
 });
 
 describe("tenancy", () => {
-  it("gives every account its own schema with Dossier's tables and the built-in themes", async () => {
+  it("gives every account its own schema with Career Studio's tables and the built-in themes", async () => {
     for (const id of [a, b]) {
       const { rows } = await accountsQuery<{ n: string }>(
         `SELECT count(*)::text AS n FROM information_schema.tables WHERE table_schema = $1 AND table_name IN ('Application', 'ProfileField', 'Theme', 'Job')`,

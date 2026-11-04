@@ -120,12 +120,12 @@ describe("the paste step (E7-1)", () => {
     expect(screen.getByRole("link", { name: "Choose one in Settings → AI provider" })).toHaveAttribute("href", "/settings?section=ai");
   });
 
-  it("hands the posting to a Claude chat when the connector is on and Dossier has no model (#221)", async () => {
+  it("hands the posting to a Claude chat when the connector is on and Career Studio has no model (#221)", async () => {
     const tab = { closed: false, opener: {}, location: { href: "about:blank" }, close: vi.fn() };
     const open = vi.spyOn(window, "open").mockReturnValue(tab as unknown as Window);
     vi.mocked(handOffToClaude).mockResolvedValue({ ok: true, data: { url: "https://claude.ai/new?q=write" } });
     render(<NewApplication {...props} aiReady={false} writeInClaude />);
-    expect(screen.getByRole("note")).toHaveTextContent(/Dossier has no AI model of its own, so Claude writes this one/);
+    expect(screen.getByRole("note")).toHaveTextContent(/Career Studio has no AI model of its own, so Claude writes this one/);
     await userEvent.type(screen.getByLabelText("Job posting"), "Ledgerly is hiring.");
     await userEvent.type(screen.getByLabelText(/^Link to the posting/), "https://jobs.example/1");
     await userEvent.click(screen.getByRole("button", { name: "Write it with Claude →" }));
@@ -227,7 +227,7 @@ describe("how you match (E7-4)", () => {
         { requirement: "5+ years of product design", result: "covered", skill: null, experienceIds: [], note: "3 roles in your profile, since Sep 2015" },
         { requirement: "Accessibility know-how", result: "gap", skill: null, experienceIds: [], note: "Not in your profile yet" },
         { requirement: "Strong prototyping in Figma", result: "partial", skill: "Figma", experienceIds: [], note: "In your skills, but not linked to a role yet" },
-        { requirement: "Experience with payments", result: "gap", skill: null, experienceIds: [], note: "Nothing in your profile, so I'll address it honestly in the letter" },
+        { requirement: "Experience with payments", result: "gap", skill: null, experienceIds: [], note: "Your profile doesn't mention this. Add it if it applies." },
       ],
     },
     matchedWith: "match-requirements@1",
@@ -247,11 +247,11 @@ describe("how you match (E7-4)", () => {
     const rows = within(screen.getByRole("list", { name: "Requirements" })).getAllByRole("listitem");
     expect(rows.map((row) => row.textContent)).toEqual([
       "✓Covered: 5+ years of product design3 roles in your profile, since Sep 2015",
-      "–Not covered: Accessibility know-howNot in your profile yet+ Add to profile",
+      "–Not shown in your profile: Accessibility know-howNot in your profile yet+ Add to profile",
       "~Partly covered: Strong prototyping in FigmaIn your skills, but not linked to a role yet",
-      "–Not covered: Experience with paymentsNothing in your profile, so I'll address it honestly in the letter",
+      "–Not shown in your profile: Experience with paymentsYour profile doesn't mention this. Add it if it applies.",
     ]);
-    expect(screen.getByText(/^Gaps aren't dealbreakers\./)).toBeInTheDocument();
+    expect(screen.getByText(/^Not shown means your profile doesn't mention it/)).toBeInTheDocument();
   });
 
   it("adds a missing skill to the profile, which makes it partly covered (NEW-5)", async () => {

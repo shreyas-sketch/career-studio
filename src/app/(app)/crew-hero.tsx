@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { useCrew } from "@/components/crew/crew-provider";
+import { CrewRecent } from "@/components/crew/crew-recent";
 import { KineticMobile } from "@/components/crew/kinetic-mobile";
 import { crewSummary } from "@/lib/crew/crew";
 
@@ -25,6 +26,7 @@ export function CrewHero({ title, standing, action }: { title: ReactNode; standi
             <div className="pt-1">{action}</div>
           </div>
         </KineticMobile>
+        <CrewRecent className="px-10 pb-5 max-sm:px-4" />
       </div>
     </div>
   );

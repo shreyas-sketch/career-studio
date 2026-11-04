@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 import { experienceMonths, type ProfileData } from "@/lib/profile";
+import { describeAsked, experienceAsked } from "@/lib/scoring/experience-asked";
 
 import { postingForPrompt, profileForPrompt, system, UNTRUSTED_POSTING, type Task } from "./prompt-parts";
 
-export const SCORE_POSTING_VERSION = "score-posting@2";
+export const SCORE_POSTING_VERSION = "score-posting@3";
 
 // The job agent's first look at a posting (E16-2): a cheap, explainable fit
 // score before anything is spent on a draft. Adapted from avinashbatchala's
@@ -38,6 +39,8 @@ A large seniority gap either way, such as a role asking for 2 to 5 years from so
 
 - reasons: one to four short sentences, each pointing at a specific requirement of the posting and a specific part of the profile (a role, a project, a skill, a degree). Never invent experience the profile doesn't show.
 - redFlags: up to three real concerns, or none: a missing must-have skill, a seniority mismatch either way (a role far above the candidate's level, or well below it), a location or work-permit requirement the profile can't meet, or a language the candidate doesn't speak.
+
+The posting's facts say how many years it asks for, when that's known. If they say it isn't stated, that only means the text you were given doesn't say: never write that the job has no experience requirement.
 
 Never use age, gender, nationality, ethnicity, religion, disability, family status or any other protected characteristic. If the posting is too thin to judge, say so in a reason and score conservatively.`;
 
@@ -90,7 +93,7 @@ export const scorePosting: Task<ScorePostingInput, PostingScore> = async (provid
         content: [
           `The candidate's profile:\n${profileForPrompt(profile)}`,
           `The candidate's work experience: ${years === 1 ? "about 1 year" : `about ${years} years`} in all, counting overlapping roles once.`,
-          `The posting's facts:\n${JSON.stringify({ title, company, place, remote, salary }, null, 2)}`,
+          `The posting's facts:\n${JSON.stringify({ title, company, place, remote, salary, experienceAsked: describeAsked(experienceAsked(posting)) }, null, 2)}`,
           `The posting:\n${postingForPrompt(posting)}`,
         ].join("\n\n"),
       },

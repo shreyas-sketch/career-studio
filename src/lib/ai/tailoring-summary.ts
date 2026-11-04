@@ -100,8 +100,11 @@ export function tailoringSummary({
   }
 
   if (letter.some(isParagraph)) list.push(`Wrote a ${TONES[tone].label.toLowerCase()} cover letter`);
-  const gaps = match.items.filter((item) => item.result === "gap").map((item) => `“${item.requirement}”`);
-  if (gaps.length > 0) list.push(`Worth being ready to talk about ${listOf(gaps)}, since ${gaps.length === 1 ? "it isn't" : "they aren't"} in your profile`);
+  const quoted = (items: Match["items"]) => items.map((item) => `“${item.requirement}”`);
+  const unmet = quoted(match.items.filter((item) => item.result === "gap" && item.basis === "unmet"));
+  const silent = quoted(match.items.filter((item) => item.result === "gap" && item.basis !== "unmet"));
+  if (silent.length > 0) list.push(`Your profile doesn't mention ${listOf(silent)}. Add ${silent.length === 1 ? "it" : "them"} if ${silent.length === 1 ? "it applies" : "they apply"}, and I can use ${silent.length === 1 ? "it" : "them"}`);
+  if (unmet.length > 0) list.push(`Worth being ready to talk about ${listOf(unmet)}, which your profile doesn't reach`);
   if (note.trim()) list.push(`Took your note into account: “${note.trim()}”`);
 
   const flagged = [...resume, ...letter].reduce((count, entry) => count + (entry.unverified?.length ?? 0), 0);

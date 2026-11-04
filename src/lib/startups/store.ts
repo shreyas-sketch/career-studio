@@ -12,7 +12,8 @@ import { lookUpSite, rankEmails } from "./emails";
 import { matchStartup, MATCH_VERSION, whereText } from "./match";
 import { placeOf, reach, type Place } from "./place";
 import { domainOf, withoutAddresses } from "./text";
-import { startupEmailSchema, startupLinkSchema, STARTUP_SOURCES, type FoundStartup, type StartupEmail, type StartupFilter, type StartupSource, type StartupView } from "./types";
+import { readHeading } from "./sources/hn";
+import { startupEmailSchema, startupLinkSchema, STARTUP_SOURCES, UNNAMED_COMPANY, type FoundStartup, type StartupEmail, type StartupFilter, type StartupSource, type StartupView } from "./types";
 
 // Startups in the database (#222): kept from refresh to refresh with what
 // the user did with them (saved, contacted, dismissed, notes), scored
@@ -69,7 +70,27 @@ const folded = (name: string) =>
 /** What "Remove and don't bring back" keeps: hashes of the post, the site's domain and the name, nothing readable. */
 export function blockHashes(startup: Pick<FoundStartup, "source" | "externalId" | "website" | "company">): string[] {
   const domain = domainOf(startup.website);
-  return [hash(`post:${startup.source}:${startup.externalId}`), ...(domain ? [hash(`site:${domain}`)] : []), ...(folded(startup.company) ? [hash(`name:${folded(startup.company)}`)] : [])];
+  return [hash(`post:${startup.source}:${startup.externalId}`), ...(domain ? [hash(`site:${domain}`)] : []), ...(folded(startup.company) && startup.company !== UNNAMED_COMPANY ? [hash(`name:${folded(startup.company)}`)] : [])];
+}
+
+/**
+ * Hacker News posts kept from before headings were read in any order: their
+ * text is still there, so they're read again. One nobody here could take goes,
+ * unless the user has saved it or written to it.
+ */
+export async function rereadHnStartups(): Promise<void> {
+  const { place } = await scoring();
+  const rows = await prisma.startup.findMany({ where: { source: "HN" }, select: { id: true, status: true, company: true, location: true, remote: true, details: true } });
+  for (const row of rows) {
+    const heading = readHeading(row.details, place);
+    if (!heading || (!heading.open && row.status === "NEW")) {
+      if (row.status === "NEW") await prisma.startup.delete({ where: { id: row.id } });
+      continue;
+    }
+    if (heading.company !== row.company || heading.location !== row.location || heading.remote !== row.remote) {
+      await prisma.startup.update({ where: { id: row.id }, data: { company: heading.company.slice(0, 200), location: heading.location, remote: heading.remote } });
+    }
+  }
 }
 
 /** The place and profile to score against. */

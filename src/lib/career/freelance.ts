@@ -8,7 +8,8 @@ import { getAiProvider } from "@/lib/ai";
 import { fitSchema, scoreOpportunity } from "@/lib/ai/tasks/career/freelance";
 import { loadTaskOptions } from "@/lib/ai/task-options";
 import { loadFreelancePrefs, prefsForPrompt, type FreelancePrefs } from "@/lib/career/freelance-prefs";
-import { FREELANCE_SOURCES, keywordScore, searchFreelanceSources, type FoundOpportunity, type FreelanceSource } from "@/lib/career/freelance-sources";
+import { isSoftSkill, relevanceOf, TIER_ORDER, withoutUnbackedClaims, type Relevance } from "@/lib/career/freelance-relevance";
+import { FREELANCE_SOURCES, searchFreelanceSources, type FoundOpportunity, type FreelanceSource } from "@/lib/career/freelance-sources";
 import { defineJob, startJob } from "@/lib/jobs/runner";
 import { prisma } from "@/lib/prisma";
 import { loadProfile } from "@/lib/profile-data";
@@ -28,11 +29,12 @@ export function searchKeywords(prefs: FreelancePrefs, profile: ProfileData): str
     .split(/[,|/·•]+| and /i)
     .map((part) => part.trim())
     .filter((part) => part.length >= 2 && part.length <= 40);
-  return [...new Set([...fromHeadline, ...profile.skills.slice(0, 6).map((skill) => skill.name)])].slice(0, 8);
+  const skills = profile.skills.map((skill) => skill.name).filter((name) => !isSoftSkill(name));
+  return [...new Set([...fromHeadline, ...skills.slice(0, 6)])].slice(0, 8);
 }
 
 /** Listings that match the preferences: wanted contract types, not what they avoid, and at least one keyword. */
-export function relevant(items: FoundOpportunity[], prefs: FreelancePrefs, keywords: string[]): { item: FoundOpportunity; relevance: number }[] {
+export function relevant(items: FoundOpportunity[], prefs: FreelancePrefs, keywords: string[]): { item: FoundOpportunity; relevance: Relevance }[] {
   const avoid = prefs.avoid
     .split(/[,;\n]+/)
     .map((word) => word.trim().toLowerCase())
@@ -45,9 +47,14 @@ export function relevant(items: FoundOpportunity[], prefs: FreelancePrefs, keywo
       return wanted || !/(contract|freelance|part)/.test(kind);
     })
     .filter((item) => !avoid.some((word) => `${item.title} ${item.description}`.toLowerCase().includes(word)))
-    .map((item) => ({ item, relevance: keywords.length > 0 ? keywordScore(item, keywords) : 1 }))
-    .filter(({ relevance }) => relevance > 0)
-    .sort((a, b) => b.relevance - a.relevance || Date.parse(b.item.postedAt ?? "0") - Date.parse(a.item.postedAt ?? "0"));
+    .map((item) => ({ item, relevance: relevanceOf(item, keywords) }))
+    .filter(({ relevance }) => relevance.tier !== "none")
+    .sort(
+      (a, b) =>
+        TIER_ORDER[a.relevance.tier] - TIER_ORDER[b.relevance.tier] ||
+        b.relevance.matched.length - a.relevance.matched.length ||
+        Date.parse(b.item.postedAt ?? "0") - Date.parse(a.item.postedAt ?? "0"),
+    );
 }
 
 export const freelanceRefreshJob = defineJob({
@@ -101,7 +108,15 @@ export const freelanceRefreshJob = defineJob({
 
     // The best unscored ones get a fit score right away; the rest on request.
     const unscored = await prisma.freelanceOpportunity.findMany({
-      where: { score: null, status: { not: OpportunityStatus.DISMISSED }, OR: matches.slice(0, AUTO_SCORE).map(({ item }) => ({ source: item.source, externalId: item.externalId })) },
+      where: {
+        score: null,
+        status: { not: OpportunityStatus.DISMISSED },
+        // Nothing is spent on a listing that only mentions a keyword in passing.
+        OR: matches
+          .filter(({ relevance }) => relevance.tier !== "low")
+          .slice(0, AUTO_SCORE)
+          .map(({ item }) => ({ source: item.source, externalId: item.externalId })),
+      },
       select: { id: true },
     });
     let scored = 0;
@@ -135,7 +150,7 @@ async function scoreOne(
     { opportunity: { ...row, source: FREELANCE_SOURCES[row.source as FreelanceSource]?.name ?? row.source }, profile, preferences: prefsForPrompt(prefs) },
     { ...options, signal },
   );
-  await prisma.freelanceOpportunity.update({ where: { id }, data: { score: data.score, fit: data as Prisma.InputJsonValue, scoredWith: promptVersion } });
+  await prisma.freelanceOpportunity.update({ where: { id }, data: { score: data.score, fit: withoutUnbackedClaims(data, profile, prefs) as Prisma.InputJsonValue, scoredWith: promptVersion } });
 }
 
 export const scoreOpportunityJob = defineJob({
@@ -157,7 +172,15 @@ export async function setOpportunityStatus(id: string, status: OpportunityStatus
   await prisma.freelanceOpportunity.update({ where: { id }, data: { status } });
 }
 
-export async function listOpportunities(filter: "open" | "saved" | "pursuing" | "dismissed" = "open") {
+/**
+ * The listings to show, each with how relevant it is and why: read afresh, so
+ * changed keywords and listings saved before this check count too. Strong
+ * matches lead; a model's score orders them within that, never past it.
+ */
+export async function listOpportunities(
+  filter: "open" | "saved" | "pursuing" | "dismissed",
+  { keywords, prefs, profile }: { keywords: string[]; prefs: FreelancePrefs; profile: ProfileData },
+) {
   const where: Prisma.FreelanceOpportunityWhereInput =
     filter === "open"
       ? { status: { in: [OpportunityStatus.NEW, OpportunityStatus.SAVED, OpportunityStatus.PURSUING] } }
@@ -167,10 +190,19 @@ export async function listOpportunities(filter: "open" | "saved" | "pursuing" | 
     orderBy: [{ score: { sort: "desc", nulls: "last" } }, { postedAt: { sort: "desc", nulls: "last" } }],
     take: 120,
   });
-  return rows.map((row) => {
+  const listed = rows.map((row) => {
     const fit = row.fit ? fitSchema.safeParse(row.fit) : null;
-    return { ...row, tags: z.array(z.string()).catch([]).parse(row.tags), fit: fit?.success ? fit.data : null, sourceName: FREELANCE_SOURCES[row.source as FreelanceSource]?.name ?? row.source };
+    const tags = z.array(z.string()).catch([]).parse(row.tags);
+    return {
+      ...row,
+      tags,
+      relevance: relevanceOf({ title: row.title, tags, description: row.description }, keywords),
+      // Fits saved before the check get it too, without being scored again.
+      fit: fit?.success ? withoutUnbackedClaims(fit.data, profile, prefs) : null,
+      sourceName: FREELANCE_SOURCES[row.source as FreelanceSource]?.name ?? row.source,
+    };
   });
+  return listed.sort((a, b) => TIER_ORDER[a.relevance.tier] - TIER_ORDER[b.relevance.tier]);
 }
 
 export async function loadOpportunity(id: string) {

@@ -30,7 +30,7 @@ export default async function SkillPlanPage({ params }: PageProps<"/skills/[id]"
       />
       <Screen wide>
         <PlanView
-          plan={{ id: plan.id, status: plan.status, assessment: plan.assessment, content: plan.plan, progress: plan.progress, totals: plan.totals, applicationId: plan.application?.id ?? null }}
+          plan={{ id: plan.id, status: plan.status, assessment: plan.assessment, content: plan.plan, progress: plan.progress, totals: plan.totals, hoursPerWeek: plan.hoursPerWeek, applicationId: plan.application?.id ?? null }}
           jobId={jobId}
           aiReady={aiReady}
         />

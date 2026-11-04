@@ -4,7 +4,7 @@ import { LanguageLevel } from "@/generated/prisma/enums";
 
 import { MockProvider } from "../providers/mock";
 
-import { extractProfile } from "./extract-profile";
+import { checkedProfile, extractProfile } from "./extract-profile";
 
 const RESUME = `John Doe
 Senior Product Designer · Utrecht, Netherlands · robin@example.com · +31 6 1234 5678
@@ -107,7 +107,7 @@ describe("extractProfile (E4-10)", () => {
   it("checks the answer: dates in range, levels, one of each skill, and names looked up in the resume", async () => {
     const provider = new MockProvider({ reply: () => answer });
     const { data, promptVersion } = await extractProfile(provider, { resume: RESUME, today: new Date("2026-09-29") }, options);
-    expect(promptVersion).toBe("extract-profile@4");
+    expect(promptVersion).toBe("extract-profile@5");
     expect(data.basics).toEqual({
       name: "John Doe",
       headline: "Senior Product Designer",
@@ -188,5 +188,49 @@ describe("extractProfile (E4-10)", () => {
     const provider = new MockProvider({ reply: () => ({ ...answer, basics: { ...answer.basics, dob: "1990-02-30" } }) });
     const { data } = await extractProfile(provider, { resume: RESUME }, options);
     expect(data.basics.dob).toBeUndefined();
+  });
+});
+
+describe("links and places in a resume (QA 4 Nov 2026)", () => {
+  const noDates = { startYear: null, startMonth: null, endYear: null, endMonth: null, current: false };
+  const basics = { name: null, headline: null, email: null, phone: null, dob: null, website: null, address: null, city: null, country: null, linkedin: null, summary: null };
+  const answer = { basics, skills: [], languages: [], experience: [], projects: [], education: [], publications: [], references: [] };
+  const resume = (...lines: string[]) =>
+    ["Ada Example", "Mumbai, Maharashtra, India", "Fraud Detector", "", "Links in this file, behind words in the text above:", ...lines].join("\n");
+  const today = new Date("2026-11-04");
+
+  it("puts links where they belong, and shows the rest", () => {
+    const { basics: read, projects, otherLinks } = checkedProfile(
+      { ...answer, projects: [{ name: "Fraud Detector", link: null, ...noDates, bullets: [], skills: [] }] },
+      resume("https://www.linkedin.com/in/ada", "https://github.com/ada", "https://github.com/ada/fraud-detector", "https://example.org/talk"),
+      today,
+    );
+    expect(read.linkedin).toBe("https://www.linkedin.com/in/ada");
+    expect(read.website).toBe("https://github.com/ada");
+    expect(projects[0].link).toBe("https://github.com/ada/fraud-detector");
+    expect(otherLinks).toEqual(["https://example.org/talk"]);
+  });
+
+  it("drops an address the file doesn't hold, leaving the field empty", () => {
+    const { basics: read, projects } = checkedProfile(
+      { ...answer, basics: { ...basics, website: "https://made-up.example" }, projects: [{ name: "Fraud Detector", link: "https://github.com/ada/invented", ...noDates, bullets: [], skills: [] }] },
+      "Ada Example\nFraud Detector",
+      today,
+    );
+    expect(read.website).toBeUndefined();
+    expect(projects[0].link).toBe("");
+  });
+
+  it("keeps a city's state or region, without taking the country for one", () => {
+    const withCity = (city: string, country: string, text: string) => checkedProfile({ ...answer, basics: { ...basics, city, country } }, text, today).basics.city;
+    expect(withCity("Mumbai", "India", "Mumbai, Maharashtra, India")).toBe("Mumbai, Maharashtra");
+    expect(withCity("Mumbai", "India", "Mumbai, India")).toBe("Mumbai");
+    expect(withCity("Mumbai", "India", "Lives in Mumbai.")).toBe("Mumbai");
+    expect(withCity("Mumbai, Maharashtra", "India", "Mumbai, Maharashtra, India")).toBe("Mumbai, Maharashtra");
+  });
+
+  it("lists a skill once however it's written", () => {
+    const { skills } = checkedProfile({ ...answer, skills: ["Node.js", "NodeJS", "C", "C++", "CI/CD", "CICD"] }, "Node.js C C++ CI/CD", today);
+    expect(skills.map(({ name }) => name)).toEqual(["Node.js", "C", "C++", "CI/CD"]);
   });
 });

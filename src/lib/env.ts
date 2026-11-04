@@ -232,7 +232,7 @@ export function checkEnvOnStartup(): void {
   } catch (error) {
     if (!(error instanceof EnvError)) throw error;
     for (const problem of error.problems) {
-      console.error(`Dossier can't start: ${problem}`);
+      console.error(`Career Studio can't start: ${problem}`);
     }
     process.exit(1);
   }

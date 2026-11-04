@@ -371,11 +371,12 @@ function ExportMenu({ id }: { id: string }) {
             ["txt", "Plain text (.txt)"],
           ].map(([format, label]) => (
             <li key={format}>
-              <a href={`/api/resume-versions/${id}/export?format=${format}`} className="flex items-center gap-2 rounded-control px-3 py-2 text-sm text-ink hover:bg-hover hover:text-ink" onClick={() => setOpen(false)}>
+              <a href={`/api/resume-versions/${id}/export?format=${format}`} download className="flex items-center gap-2 rounded-control px-3 py-2 text-sm text-ink hover:bg-hover hover:text-ink" onClick={() => setOpen(false)}>
                 <Download size={14} aria-hidden="true" /> {label}
               </a>
             </li>
           ))}
+          <li className="px-3 py-2 text-meta text-pretty text-muted">Nothing downloaded? Your browser or an extension may be blocking it. Allow downloads from this site, or try the PDF.</li>
         </ul>
       )}
     </div>

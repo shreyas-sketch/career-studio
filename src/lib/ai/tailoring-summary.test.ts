@@ -36,7 +36,7 @@ describe("tailoringSummary (E7-6)", () => {
       "Ordered your skills by what Ledgerly asks for",
       "Left out references, since the posting doesn't ask for them",
       "Wrote a warm cover letter",
-      "Worth being ready to talk about “Experience with payments or fintech”, since it isn't in your profile",
+      "Your profile doesn't mention “Experience with payments or fintech”. Add it if it applies, and I can use it",
     ]);
     expect(summary.foot).toBe("Nothing invented: every line comes from your profile.");
   });

@@ -43,6 +43,21 @@ export type FoundOpportunity = {
 };
 
 const clip = (value: string | null | undefined, max: number) => (value ?? "").replace(/\s+\n/g, "\n").trim().slice(0, max);
+
+/**
+ * Text a source encoded twice, as UTF-8 read as Latin-1 ("Lead â\u0080\u0094 Logistics",
+ * "fÃ¼r"), which Remote OK's API sends. Decoding is only kept when the whole
+ * text is valid that way, so correct text ("café") stays as it was.
+ */
+export function repairedText(text: string): string {
+  if (!/[\u00c2-\u00f4][\u0080-\u00bf]/.test(text) || /[^\u0000-\u00ff]/.test(text)) return text;
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(Buffer.from(text, "latin1"));
+  } catch {
+    return text;
+  }
+}
+
 const isHttp = (url: string) => /^https?:\/\//i.test(url);
 
 // ─── The shared cache ───────────────────────────────────────────────────────
@@ -179,7 +194,7 @@ export function fromRemoteOk(payload: unknown): FoundOpportunity[] {
   return parsed.data.flatMap((entry) => {
     const job = remoteOkJob.safeParse(entry);
     if (!job.success || !isHttp(job.data.url)) return [];
-    const tags = job.data.tags ?? [];
+    const tags = (job.data.tags ?? []).map(repairedText);
     const text = `${job.data.position} ${tags.join(" ")}`;
     if (!CONTRACT.test(text) && !tags.some((tag) => CONTRACT.test(tag))) return [];
     const salary = job.data.salary_min && job.data.salary_max ? `$${job.data.salary_min.toLocaleString("en-US")}–$${job.data.salary_max.toLocaleString("en-US")} a year` : "";
@@ -187,13 +202,13 @@ export function fromRemoteOk(payload: unknown): FoundOpportunity[] {
       {
         source: "REMOTEOK" as const,
         externalId: String(job.data.id),
-        title: clip(job.data.position, 200),
-        client: clip(job.data.company, 120),
+        title: clip(repairedText(job.data.position), 200),
+        client: clip(repairedText(job.data.company ?? ""), 120),
         url: job.data.url,
-        description: clip(htmlToText(job.data.description ?? ""), 12_000),
+        description: clip(repairedText(htmlToText(job.data.description ?? "")), 12_000),
         budget: salary,
         kind: tags.filter((tag) => CONTRACT.test(tag)).join(", ") || "contract",
-        location: clip(job.data.location, 160) || "Remote",
+        location: clip(repairedText(job.data.location ?? ""), 160) || "Remote",
         tags: tags.slice(0, 12),
         postedAt: job.data.date ?? null,
       },
@@ -262,7 +277,8 @@ export function fromHnThread(payload: unknown): FoundOpportunity[] {
     // Only those looking for a freelancer; "SEEKING WORK" posts are other freelancers.
     if (!/^\s*seeking\s+freelancer/i.test(text)) return [];
     const body = text.replace(/^\s*seeking\s+freelancer\s*[:\-–]?\s*/i, "");
-    const firstLine = body.split("\n").map((line) => line.trim()).find(Boolean) ?? "";
+    // The first line that says what the work is: not only where it's done.
+    const firstLine = body.split("\n").map((line) => line.trim()).find((line) => line && !/^(?:remote|on-?site|hybrid)[.!]?$/i.test(line)) ?? "";
     return [
       {
         source: "HN" as const,
@@ -319,20 +335,4 @@ export async function searchFreelanceSources(keywords: string[], signal?: AbortS
       }
     }),
   );
-}
-
-/** How well a listing matches the keywords, by where they appear: a cheap first sort before any AI. */
-export function keywordScore(item: FoundOpportunity, keywords: string[]): number {
-  const title = item.title.toLowerCase();
-  const tags = item.tags.join(" ").toLowerCase();
-  const body = item.description.toLowerCase();
-  let score = 0;
-  for (const raw of keywords) {
-    const word = raw.trim().toLowerCase();
-    if (word.length < 2) continue;
-    if (title.includes(word)) score += 5;
-    if (tags.includes(word)) score += 3;
-    if (body.includes(word)) score += 1;
-  }
-  return score;
 }

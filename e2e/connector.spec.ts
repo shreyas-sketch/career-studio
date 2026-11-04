@@ -73,7 +73,7 @@ test("connects Claude through Settings and the consent page, serves its tools, a
   expect(registered.status()).toBe(201);
   const n8nQuery = new URLSearchParams({ response_type: "code", client_id: (await registered.json()).client_id, redirect_uri: n8n, code_challenge: "a".repeat(43), code_challenge_method: "S256", state: "s" });
   await page.goto(`/oauth/authorize?${n8nQuery}`);
-  await expect(page.getByRole("heading", { name: "Connect n8n to Dossier" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Connect n8n to Career Studio" })).toBeVisible();
 
   const { client_id: clientId } = await (await claude.post("/api/oauth/register", { data: { redirect_uris: [CALLBACK], client_name: "Claude" } })).json();
 
@@ -83,7 +83,7 @@ test("connects Claude through Settings and the consent page, serves its tools, a
   await page.route("https://claude.ai/**", (route) => route.fulfill({ status: 200, contentType: "text/plain", body: "Back in Claude" }));
   const query = new URLSearchParams({ response_type: "code", client_id: clientId, redirect_uri: CALLBACK, code_challenge: challenge, code_challenge_method: "S256", state: "xyz", resource: address });
   await page.goto(`/oauth/authorize?${query}`);
-  await expect(page.getByRole("heading", { name: "Connect Claude to Dossier" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Connect Claude to Career Studio" })).toBeVisible();
   await expect(page.getByText("Once you allow it, it can:", { exact: false })).toBeVisible();
   await expect(page.getByText("It can never send an application or an email, or delete anything.", { exact: false })).toBeVisible();
   await expectAccessible(page);

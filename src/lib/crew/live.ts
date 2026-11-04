@@ -1,6 +1,7 @@
 import "server-only";
 
 import { JobStatus } from "@/generated/prisma/enums";
+import { resultHref, roundIds } from "@/lib/jobs/result-href";
 import { prisma } from "@/lib/prisma";
 
 import { CREW, jobRole, restingCrew, type CrewHandover, type CrewSnapshot } from "./crew";
@@ -14,11 +15,14 @@ const FINISHED_KEPT = 12;
  * is made up to look busy. A member with no job in hand is resting.
  */
 export async function loadCrew(now = new Date()): Promise<CrewSnapshot> {
-  const select = { id: true, type: true, status: true, step: true, error: true, finishedAt: true, applicationId: true, application: { select: { company: true } } } as const;
+  const select = { id: true, type: true, status: true, step: true, error: true, finishedAt: true, applicationId: true, input: true, application: { select: { company: true } } } as const;
   const [active, ended] = await Promise.all([
     prisma.job.findMany({ where: { status: { in: [JobStatus.QUEUED, JobStatus.RUNNING] } }, orderBy: { createdAt: "asc" }, take: 30, select }),
     prisma.job.findMany({ where: { status: { in: [JobStatus.DONE, JobStatus.FAILED] }, finishedAt: { not: null } }, orderBy: { finishedAt: "desc" }, take: 80, select }),
   ]);
+
+  const rounds = await prisma.interviewRound.findMany({ where: { id: { in: roundIds(ended) } }, select: { id: true, loopId: true } });
+  const loops = new Map(rounds.map(({ id, loopId }) => [id, loopId]));
 
   const members = restingCrew();
   const finished: CrewHandover[] = [];
@@ -45,7 +49,8 @@ export async function loadCrew(now = new Date()): Promise<CrewSnapshot> {
         crew: role.crew,
         what: role.did,
         about,
-        href: job.applicationId ? `/applications/${job.applicationId}` : CREW[role.crew].href,
+        href: resultHref(job, CREW[role.crew].href, loops),
+        at: job.finishedAt!.toISOString(),
         error: failed ? (job.error ?? "This didn't finish.") : null,
         handsOver: role.handsOver === true || failed,
       });

@@ -71,7 +71,7 @@ export function AboutSection({ facts, usagePing, updates }: { facts: AboutFacts;
     : fromEnv
       ? `Set with DOSSIER_TELEMETRY=${usagePing.choice} on the server, which decides while it's set. Change it there.`
       : pinging
-        ? `On. Once on each day Dossier is used, the server sends ${usagePing.host} ${usagePing.id ? `this install's ID (${usagePing.id})` : "this install's ID, made with the first ping,"} and the version number. Nothing else.`
+        ? `On. Once on each day Career Studio is used, the server sends ${usagePing.host} ${usagePing.id ? `this install's ID (${usagePing.id})` : "this install's ID, made with the first ping,"} and the version number. Nothing else.`
         : answered
           ? "Off. Nothing is sent, and this install's ID is forgotten."
           : "Not answered yet, so nothing is sent.";
@@ -119,8 +119,8 @@ export function AboutSection({ facts, usagePing, updates }: { facts: AboutFacts;
           label="Check for updates daily"
           description={
             daily
-              ? "Once on each day Dossier is used, the server asks GitHub for the latest release, and the sidebar says when a newer one is out."
-              : "Off. Dossier only checks when you press Check for updates."
+              ? "Once on each day Career Studio is used, the server asks GitHub for the latest release, and the sidebar says when a newer one is out."
+              : "Off. Career Studio only checks when you press Check for updates."
           }
           checked={daily}
           onCheckedChange={switchDaily}

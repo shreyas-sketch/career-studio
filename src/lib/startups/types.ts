@@ -49,6 +49,9 @@ export function startupAddress(emails: unknown): string {
 export const startupLinkSchema =z.object({ label: z.string().max(60), url: z.string().max(2000).regex(/^https?:\/\//i) });
 export type StartupLink = z.infer<typeof startupLinkSchema>;
 
+/** For a post that doesn't say who's hiring: said plainly, rather than a guess. */
+export const UNNAMED_COMPANY = "Company not named";
+
 /** A startup as a source found it. */
 export type FoundStartup = {
   source: StartupSource;

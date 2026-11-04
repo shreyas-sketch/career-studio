@@ -5,6 +5,8 @@ import "server-only";
 // every AI provider can work with it, local models included (decided 29
 // September 2026).
 
+import { LINKS_HEADING } from "@/lib/resume-links";
+
 /** The largest file the import takes; resumes are rarely over 1 MB. */
 export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
 /** Enough for a long resume; the rest isn't sent to the model. */
@@ -30,15 +32,21 @@ const ZIP = [0x50, 0x4b, 0x03, 0x04]; // PK: .docx is a zip
 export async function resumeText(bytes: Uint8Array): Promise<ResumeText> {
   if (bytes.length > RESUME_MAX_BYTES) return { ok: false, error: RESUME_MESSAGES.tooBig };
   let raw: string;
+  let links: string[] = [];
   // Markdown and plain text have no signature: a file is text when it reads as such.
   const written = startsWith(bytes, PDF) || startsWith(bytes, ZIP) ? null : asText(bytes);
   try {
     if (startsWith(bytes, PDF)) {
-      const { extractText, getDocumentProxy } = await import("unpdf");
-      raw = (await extractText(await getDocumentProxy(bytes), { mergePages: true })).text;
+      const { extractLinks, extractText, getDocumentProxy } = await import("unpdf");
+      const document = await getDocumentProxy(bytes);
+      raw = (await extractText(document, { mergePages: true })).text;
+      // A file that hides its links shouldn't lose its text over them.
+      links = await extractLinks(document).then((found) => found.links, () => []);
     } else if (startsWith(bytes, ZIP)) {
       const mammoth = await import("mammoth");
-      raw = (await mammoth.extractRawText({ buffer: Buffer.from(bytes) })).value;
+      const buffer = Buffer.from(bytes);
+      raw = (await mammoth.extractRawText({ buffer })).value;
+      links = await mammoth.convertToHtml({ buffer }).then(({ value }) => [...value.matchAll(/href="([^"]+)"/g)].map((found) => found[1].replaceAll("&amp;", "&")), () => []);
     } else if (written !== null) {
       raw = markdownText(written);
     } else {
@@ -51,7 +59,21 @@ export async function resumeText(bytes: Uint8Array): Promise<ResumeText> {
   if (text.replace(/\s/g, "").length < MIN_CHARACTERS) {
     return { ok: false, error: written === null ? RESUME_MESSAGES.noText : RESUME_MESSAGES.tooShort };
   }
-  return { ok: true, text: text.slice(0, MAX_RESUME_CHARACTERS) };
+  const hidden = linksSection(links, text);
+  return { ok: true, text: `${text.slice(0, MAX_RESUME_CHARACTERS - hidden.length)}${hidden}` };
+}
+
+const MAX_LINKS = 40;
+const MAX_LINK_LENGTH = 500;
+
+/** The web links the text doesn't already show, as a section to add after it. */
+function linksSection(links: string[], text: string): string {
+  const shown = text.toLowerCase();
+  const hidden = [...new Set(links.map((link) => link.trim()))]
+    .filter((link) => /^https?:\/\/\S+$/i.test(link) && link.length <= MAX_LINK_LENGTH)
+    .filter((link) => !shown.includes(link.toLowerCase().replace(/^https?:\/\/(?:www\.)?/, "").replace(/\/$/, "")))
+    .slice(0, MAX_LINKS);
+  return hidden.length > 0 ? `\n\n${LINKS_HEADING}\n${hidden.join("\n")}` : "";
 }
 
 /**

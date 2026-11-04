@@ -16,7 +16,7 @@ const TYPES: Record<ExportFormat, string> = {
 /** A resume version as Markdown, plain text or Word: `?format=md|txt|docx`. The PDF is /api/pdf?doc=version. */
 export const GET = route<RouteContext<"/api/resume-versions/[id]/export">>(async (request, { params }) => {
   const format = request.nextUrl.searchParams.get("format") ?? "";
-  if (!(format in EXPORT_FORMATS)) return NextResponse.json({ error: "Choose Markdown, plain text or Word." }, { status: 400 });
+  if (!Object.hasOwn(EXPORT_FORMATS, format)) return NextResponse.json({ error: "Choose Markdown, plain text or Word." }, { status: 400 });
   const [version, profile, settings] = await Promise.all([loadResumeVersion((await params).id), loadProfile(), loadSettings()]);
   if (!version) return NextResponse.json({ error: "That resume no longer exists." }, { status: 404 });
   const content = exportContent(profile, version.units, settings.resumeLanguage);

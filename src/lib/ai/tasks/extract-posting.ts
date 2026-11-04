@@ -4,7 +4,7 @@ import { extractedSchema, requirementSchema, type Extracted } from "@/lib/applic
 
 import { postingForPrompt, system, UNTRUSTED_POSTING, type Task } from "./prompt-parts";
 
-export const EXTRACT_POSTING_VERSION = "extract-posting@2";
+export const EXTRACT_POSTING_VERSION = "extract-posting@3";
 
 // What the model returns. The deadline is free text here and checked in
 // code, since models like to answer "15 Oct" rather than an ISO date. Small
@@ -36,10 +36,11 @@ const INSTRUCTIONS = `You read job postings and pull out their details as JSON.
 - title: "{role} · {company}", or null when either is missing.
 - deadline: the application deadline as YYYY-MM-DD. When the posting gives no year, it's the first such date after today.
 - requirements: one entry per thing the posting asks of the candidate, in its order, each shortened to the essentials (e.g. "5+ years of product design, ideally on complex B2B tools"). kind is:
-  - "years" for an amount of experience, with years set to the number (5 for "5+ years");
+  - "years" for an amount of experience, with years set to the least it asks for (5 for "5+ years", 0 for "0-2 years"), keeping any range in the text;
   - "language" for a spoken language, with language set to its English name ("Dutch");
   - "skill" for a skill, tool or method, with skill set to a short name ("Figma", "Design systems", "User research");
-  - "other" for anything else, such as domain experience.
+  - "education" for a degree or qualification, keeping its level and field in the text ("Bachelor's degree in computer science or a related field");
+  - "other" for anything else, such as domain experience or communication.
   Leave the fields that don't apply null.
 - asksForReferences: true only if the posting explicitly asks applicants to provide references; otherwise false.
 - language: the language the posting is written in, as its English name.`;

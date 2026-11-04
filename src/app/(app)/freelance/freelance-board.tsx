@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { OpportunityFit } from "@/lib/ai/tasks/career/freelance";
 import type { FreelancePrefs } from "@/lib/career/freelance-prefs";
+import type { Relevance } from "@/lib/career/freelance-relevance";
 import { cn } from "@/lib/cn";
 import type { JobView } from "@/lib/jobs/runner";
 
@@ -35,6 +36,7 @@ type Opportunity = {
   score: number | null;
   fit: OpportunityFit | null;
   status: "NEW" | "SAVED" | "PURSUING" | "DISMISSED";
+  relevance: Relevance;
 };
 
 type RefreshResult = { added: number; scored: number; sources: { source: string; found: number; error: string | null; stale: boolean }[] };
@@ -60,6 +62,9 @@ export function FreelanceBoard({
   const [pending, start] = useTransition();
   const [lastRun, setLastRun] = useState<RefreshResult | null>(null);
   const [editing, setEditing] = useState(!prefs.services && prefs.keywords.length === 0);
+  // What they've marked stays in view; only new listings can be set aside.
+  const setAside = (opportunity: Opportunity) => opportunity.status === "NEW" && (opportunity.relevance.tier === "low" || opportunity.relevance.tier === "none");
+  const lowRelevance = opportunities.filter(setAside);
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -111,11 +116,27 @@ export function FreelanceBoard({
               : "Opportunities you mark show up here."}
           </EmptyState>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {opportunities.map((opportunity) => (
-              <OpportunityCard key={opportunity.id} opportunity={opportunity} aiReady={aiReady} />
-            ))}
-          </ul>
+          <>
+            <ul className="flex flex-col gap-3">
+              {opportunities
+                .filter((opportunity) => !setAside(opportunity))
+                .map((opportunity) => (
+                  <OpportunityCard key={opportunity.id} opportunity={opportunity} aiReady={aiReady} />
+                ))}
+            </ul>
+            {lowRelevance.length > 0 && (
+              <details className="flex flex-col gap-3">
+                <summary className="cursor-pointer text-sm font-medium">
+                  Low relevance ({lowRelevance.length}) <span className="font-normal text-muted">Your keywords only come up in passing.</span>
+                </summary>
+                <ul className="mt-3 flex flex-col gap-3">
+                  {lowRelevance.map((opportunity) => (
+                    <OpportunityCard key={opportunity.id} opportunity={opportunity} aiReady={aiReady} />
+                  ))}
+                </ul>
+              </details>
+            )}
+          </>
         )}
       </div>
 
@@ -184,6 +205,8 @@ function OpportunityCard({ opportunity, aiReady }: { opportunity: Opportunity; a
             <FitMeter score={opportunity.score} />
           </div>
         </div>
+
+        <p className="text-meta text-muted">{opportunity.relevance.why}</p>
 
         {opportunity.fit && (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-3">

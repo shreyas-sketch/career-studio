@@ -198,9 +198,52 @@ function placesIn(text: string): { codes: Set<string>; regions: string[]; anywhe
   return { codes, regions, anywhere: ANYWHERE.test(text) };
 }
 
+export type WorkMode = "remote" | "hybrid" | "onsite";
+
+const HYBRID = /\b(?:hybrid|part(?:ly|ially)?[-\s]+remote|remote\s+days?|days?\s+(?:a|per)\s+week\s+(?:in|at)\b|flexible\s+remote)\b/i;
+const ONSITE = /\b(?:on-?\s?site|in[-\s]office|in[-\s]person|(?:no|not|non)[-\s]remote)\b/i;
+
+/**
+ * How a post says the work is done, or null when it doesn't. A post that's
+ * only partly remote isn't remote: someone elsewhere can't take it.
+ */
+export function workMode(text: string): WorkMode | null {
+  if (HYBRID.test(text)) return "hybrid";
+  const remote = REMOTE.test(text.replace(/\b(?:no|not|non)[-\s]remote\b/gi, ""));
+  if (ONSITE.test(text) && !remote) return "onsite";
+  return remote || ANYWHERE.test(text) ? "remote" : null;
+}
+
+/** Whether a part of a post's heading is only a place: "Cologne, Germany", "India", "Berlin, DE", "EMEA". */
+export function namesOnlyAPlace(part: string): boolean {
+  const text = part.replace(/\([^)]*\)/g, " ").trim();
+  if (!text || text.length > 60) return false;
+  const isCountry = (name: string) => COUNTRIES.some((country) => fold(country.name) === fold(name.trim()));
+  const areas = text.split(/,|\/|&|\bor\b|\band\b/i).map((area) => area.trim()).filter(Boolean);
+  if (areas.every((area) => isCountry(area) || BIG_CITIES.has(fold(area)) || REGIONS.some(({ words, caps }) => isWhole(area, words) || isWhole(area, caps)))) return true;
+  // "City, Country" or "City, CA".
+  return areas.length >= 2 && (isCountry(areas.at(-1)!) || /^[A-Z]{2,3}$/.test(areas.at(-1)!)) && areas.slice(0, -1).every((area) => /^\p{Lu}[\p{L} .'-]*$/u.test(area));
+}
+
+const isWhole = (text: string, pattern: RegExp | undefined) => {
+  const found = pattern?.exec(text);
+  return Boolean(found && found[0].trim().length === text.trim().length);
+};
+
+/** Places posts name without a country. */
+const BIG_CITIES = new Set(
+  "san francisco,sf,bay area,new york,new york city,nyc,los angeles,la,boston,seattle,austin,chicago,denver,london,berlin,munich,hamburg,cologne,paris,amsterdam,dublin,zurich,stockholm,toronto,vancouver,montreal,bangalore,bengaluru,mumbai,delhi,hyderabad,pune,singapore,sydney,melbourne,tokyo,tel aviv,remote,worldwide,global,anywhere".split(","),
+);
+
 /** Where a post or location hires, read against `place`. */
 export function reach(text: string, place: Place): Reach {
   const folded = fold(text);
+  // Partly remote or onsite: it's tied to where the post says, wherever else it mentions.
+  const mode = workMode(text);
+  if (mode === "hybrid" || mode === "onsite") {
+    const atCity = wordsPattern(place.cityNames)?.test(folded);
+    return { here: atCity ? "city" : place.country && countriesIn(folded).has(place.country) ? "country" : null, remote: false, remoteOpen: null, remoteOnly: "" };
+  }
   const city = wordsPattern(place.cityNames);
   const here = city?.test(folded) ? "city" : place.country && countriesIn(folded).has(place.country) ? "country" : null;
 

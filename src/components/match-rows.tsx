@@ -8,8 +8,10 @@ import { cn } from "@/lib/cn";
 const MARKS: Record<MatchResult, { mark: string; label: string; className: string }> = {
   covered: { mark: "✓", label: "Covered", className: "border-primary bg-primary text-on-primary" },
   partial: { mark: "~", label: "Partly covered", className: "border-warning-line bg-warning-surface text-warning" },
-  gap: { mark: "–", label: "Not covered", className: "border-line-strong text-muted" },
+  gap: { mark: "–", label: "Not shown in your profile", className: "border-line-strong text-muted" },
 };
+/** A gap the profile settles, e.g. fewer years than asked. */
+const UNMET = { mark: "!", label: "Not met", className: "border-warning-line text-warning" };
 
 /**
  * "How you match" (NEW-4, NEW-5, APP-11): each requirement covered, partly
@@ -37,7 +39,7 @@ export function MatchRows({
       </div>
       <ul aria-label="Requirements">
         {match.items.map((item, index) => {
-          const { mark, label, className } = MARKS[item.result];
+          const { mark, label, className } = item.basis === "unmet" ? UNMET : MARKS[item.result];
           const skill = requirements[index]?.kind === "skill" ? requirements[index].skill : null;
           return (
             <li key={index} className="flex items-start gap-3.5 border-t border-line py-[13px]">
@@ -50,6 +52,11 @@ export function MatchRows({
                   {item.requirement}
                 </p>
                 {item.note && <p className="text-meta text-muted">{item.note}</p>}
+                {item.evidence?.map(({ source, quote }) => (
+                  <p key={`${source}:${quote}`} className="text-meta text-muted italic">
+                    “{quote}”
+                  </p>
+                ))}
               </div>
               {item.result === "gap" && skill && (
                 <Button variant="secondary" size="sm" className="flex-none" onClick={() => onAddSkill(index, skill)}>

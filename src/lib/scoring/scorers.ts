@@ -18,7 +18,7 @@ export const SCORER_INFO: Record<Scorer, { name: string; description: string; ta
   },
   JEV: {
     name: "Jev by TypeSafe",
-    description: "A model made for quick judgments. It answers questions about the posting, and Dossier builds the score and the reasons from the posting's own lines.",
+    description: "A model made for quick judgments. It answers questions about the posting, and Career Studio builds the score and the reasons from the posting's own lines.",
     tag: "Needs a TypeSafe key",
   },
 };

@@ -32,6 +32,8 @@ const enrichmentSchema = z
     salary_max: maybeNumber,
     salary_currency: maybeText,
     salary_period: maybeText,
+    experience_years_min: maybeNumber,
+    experience_years_max: maybeNumber,
   })
   .nullish()
   .catch(null);
@@ -74,6 +76,14 @@ function salaryOf(job: Job): string {
   return [enrichment.salary_currency, range, PERIODS[enrichment.salary_period?.toLowerCase() ?? ""]].filter(Boolean).join(" ");
 }
 
+/** The years its listing asks for, which the description often leaves out; said where it comes from. */
+function experienceOf(job: Job): string {
+  const { experience_years_min: min, experience_years_max: max } = job.enrichment ?? {};
+  if (min == null && max == null) return "";
+  const years = min != null && max != null && min !== max ? `${min}–${max} years` : min != null ? `at least ${min} years` : `up to ${max} years`;
+  return `Experience asked: ${years} (listed by FreeHire)`;
+}
+
 function remoteOf(workMode: string | null | undefined): boolean | null {
   if (workMode === "remote") return true;
   if (workMode === "onsite") return false;
@@ -87,7 +97,8 @@ function postedAtOf(value: string | null | undefined): string | null {
 }
 
 export function postingFromJob(job: Job): FoundPosting {
-  const description = (job.description ?? "").trim().slice(0, 100_000);
+  const text = (job.description ?? "").trim();
+  const description = (text ? [experienceOf(job), text].filter(Boolean).join("\n\n") : "").slice(0, 100_000);
   return {
     source: "FREEHIRE",
     externalId: job.public_slug.slice(0, 500),

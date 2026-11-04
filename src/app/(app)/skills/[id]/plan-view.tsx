@@ -12,7 +12,7 @@ import { Button, buttonClassName } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { READINESS, READINESS_LABELS, type SkillAssessment, type SkillPlanContent } from "@/lib/career/skill-plan-data";
+import { phaseLoad, READINESS, READINESS_LABELS, type SkillAssessment, type SkillPlanContent } from "@/lib/career/skill-plan-data";
 import { cn } from "@/lib/cn";
 
 import { deletePlan, rewritePlan, setPlanStatus, toggleStep } from "../actions";
@@ -28,6 +28,7 @@ type PlanData = {
   progress: string[];
   totals: { steps: number; done: number; hours: number; hoursDone: number };
   applicationId: string | null;
+  hoursPerWeek: number;
 };
 
 export function PlanView({ plan, jobId: initialJob, aiReady }: { plan: PlanData; jobId: string | null; aiReady: boolean }) {
@@ -129,6 +130,7 @@ export function PlanView({ plan, jobId: initialJob, aiReady }: { plan: PlanData;
                     <h3 className="font-serif text-xl">{phase.title}</h3>
                   </div>
                   <p className="text-sm text-muted">{phase.goal}</p>
+                  <PhaseLoad load={phaseLoad(phase, plan.hoursPerWeek)} />
                   <ul className="flex flex-col gap-2">
                     {phase.steps.map((step) => {
                       const isDone = done.includes(step.id);
@@ -238,5 +240,22 @@ export function PlanView({ plan, jobId: initialJob, aiReady }: { plan: PlanData;
         }
       />
     </div>
+  );
+}
+
+/** The phase's hours against its weeks; a plan written before the check can be over, and says how to fix it. */
+function PhaseLoad({ load }: { load: { hours: number; capacity: number } | null }) {
+  if (!load) return null;
+  if (load.hours <= load.capacity) {
+    return (
+      <p className="text-meta text-muted">
+        {load.hours} of the {load.capacity} hours these weeks give you
+      </p>
+    );
+  }
+  return (
+    <p role="status" className="text-meta text-error">
+      {load.hours} hours is more than the {load.capacity} these weeks give you. Use Plan again to rebalance it.
+    </p>
   );
 }

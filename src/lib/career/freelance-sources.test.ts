@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { freelancePrefsSchema } from "./freelance-prefs";
-import { fromHimalayas, fromHnThread, fromJobicy, fromRemoteOk, fromRemotive, keywordScore } from "./freelance-sources";
+import { fromHimalayas, fromHnThread, fromJobicy, fromRemoteOk, fromRemotive, repairedText } from "./freelance-sources";
 import { relevant, searchKeywords } from "./freelance";
 
 // Test fixtures in each source's documented shape. They exist for these
@@ -107,7 +107,14 @@ describe("matching listings to preferences", () => {
     expect(keywords).toEqual(["Product designer", "Webflow developer", "Figma", "Prototyping"]);
   });
 
-  it("scores title matches above body matches", () => {
-    expect(keywordScore(listing("React developer"), ["react"])).toBeGreaterThan(keywordScore(listing("Developer", "contract", "react"), ["react"]));
+  it("doesn't title a Hacker News post by its place alone", () => {
+    const [item] = fromHnThread({ children: [{ id: 1, text: "SEEKING FREELANCER remote<p>Python backend automation.</p>" }] });
+    expect(item.title).toBe("Python backend automation.");
+  });
+
+  it("repairs text a source encoded twice, and leaves correct text alone", () => {
+    expect(repairedText("Oracle Fusion Cloud Lead \u00e2\u0080\u0094 Logistics")).toBe("Oracle Fusion Cloud Lead \u2014 Logistics");
+    expect(repairedText("Telefondienst f\u00c3\u00bcr Tierarztpraxis")).toBe("Telefondienst f\u00fcr Tierarztpraxis");
+    for (const correct of ["caf\u00e9 society", "Lead \u2014 Logistics", "M\u00fcnchen, \u20ac60k", "plain"]) expect(repairedText(correct)).toBe(correct);
   });
 });

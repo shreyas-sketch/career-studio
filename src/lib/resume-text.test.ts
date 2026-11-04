@@ -13,6 +13,25 @@ const LINES = [
 ];
 
 describe("resumeText (E4-10)", () => {
+  it.each([
+    ["PDF", pdfWith],
+    ["Word document", docxWith],
+  ])("keeps the links behind the words of a %s", async (_kind, build) => {
+    const result = await resumeText(build(LINES, ["https://www.linkedin.com/in/john-doe", "https://github.com/john/payout-sim", "javascript:alert(1)"]));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.text).toContain("Links in this file, behind words in the text above:\nhttps://www.linkedin.com/in/john-doe\nhttps://github.com/john/payout-sim");
+      expect(result.text).not.toContain("javascript:");
+    }
+  });
+
+  it("doesn't repeat a link the text already shows, or add a section for none", async () => {
+    const shown = await resumeText(pdfWith([...LINES, "github.com/john/payout-sim"], ["https://github.com/john/payout-sim"]));
+    expect(shown.ok && shown.text).not.toContain("Links in this file");
+    const none = await resumeText(pdfWith(LINES));
+    expect(none.ok && none.text).not.toContain("Links in this file");
+  });
+
   it("reads a PDF", async () => {
     const result = await resumeText(pdfWith(LINES));
     expect(result.ok).toBe(true);

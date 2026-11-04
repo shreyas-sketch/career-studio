@@ -19,6 +19,7 @@ afterAll(() => prisma().$disconnect());
 
 const noDates = { startYear: null, startMonth: null, endYear: null, endMonth: null, current: false };
 const imported: ImportedProfile = {
+  otherLinks: [],
   basics: { name: "John Doe", city: "Utrecht" },
   skills: [
     { name: "figma", found: true },
@@ -59,6 +60,25 @@ async function existingProfile() {
 }
 
 describe("applyImportedProfile (E4-10)", () => {
+  it("merges a skill however it's written, and a language in any case, with no duplicates", async () => {
+    await prisma().skill.create({ data: { name: "Node.js", sort: 0 } });
+    await prisma().skill.create({ data: { name: "C", sort: 1 } });
+    await prisma().language.create({ data: { name: "English", level: LanguageLevel.C1, sort: 0 } });
+    await applyImportedProfile(
+      prisma(),
+      {
+        ...imported,
+        skills: ["NodeJS", "node js", "C++", "c"].map((name) => ({ name, found: true })),
+        languages: [{ name: "english", level: LanguageLevel.B2, levelGiven: false }],
+        experience: [],
+        projects: [],
+      },
+      "merge",
+    );
+    expect((await prisma().skill.findMany({ orderBy: { sort: "asc" } })).map(({ name }) => name)).toEqual(["Node.js", "C", "C++"]);
+    expect(await prisma().language.findMany()).toMatchObject([{ name: "English", level: LanguageLevel.C1 }]);
+  });
+
   it("merges: the file wins where it says something, the rest is kept and the new is added", async () => {
     await existingProfile();
     await applyImportedProfile(prisma(), imported, "merge");

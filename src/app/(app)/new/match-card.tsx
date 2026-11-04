@@ -19,7 +19,7 @@ export function MatchCard({
     <Card padding="none" className="flex flex-col px-7 pt-6 pb-3">
       <MatchRows match={match} requirements={requirements} onAddSkill={onAddSkill} />
       <p className="border-t border-line py-3 text-meta text-muted">
-        Gaps aren&apos;t dealbreakers. I&apos;ll never invent experience. The important ones get addressed honestly in your cover letter.
+        Not shown means your profile doesn&apos;t mention it, not that you can&apos;t do it. I&apos;ll never invent experience, and I won&apos;t describe anything as a weakness for you.
       </p>
     </Card>
   );

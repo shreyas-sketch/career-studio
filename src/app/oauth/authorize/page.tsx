@@ -24,7 +24,7 @@ export default async function AuthorizePage({ searchParams }: PageProps<"/oauth/
         <div className="flex items-center gap-3">
           <BrandMark className="size-10" />
           <h1 className="font-serif text-[26px] font-medium tracking-[-0.01em]">
-            Connect {"error" in checked ? "an app" : checked.clientName} to Dossier
+            Connect {"error" in checked ? "an app" : checked.clientName} to Career Studio
           </h1>
         </div>
         {"error" in checked ? (

@@ -49,7 +49,7 @@ export type JobView<R = unknown> = {
 
 export const JOB_MESSAGES = {
   failed: "Something went wrong while working on this. Try again.",
-  interrupted: "Dossier restarted before this finished. Try again.",
+  interrupted: "Career Studio restarted before this finished. Try again.",
   cancelled: "Cancelled.",
 } as const;
 
@@ -114,6 +114,8 @@ export function isFinished(job: Pick<JobView, "status">): boolean {
 /**
  * Queues a job and returns its id right away. A job that works on an
  * application names it, so deleting the application deletes the job too.
+ * Asked again for the same work while it's still under way (a second click,
+ * another tab), it answers with the job already running.
  */
 export async function startJob<I, R>(
   definition: JobDefinition<I, R>,
@@ -121,12 +123,19 @@ export async function startJob<I, R>(
   options: { key?: string; applicationId?: string } = {},
 ): Promise<string> {
   defineJob(definition);
+  const parsed = definition.input.parse(input) as Prisma.InputJsonValue;
+  if (options.key) {
+    const unfinished = await findUnfinishedJobs(options.key);
+    // Read through the schema, as the database keeps a JSON object's keys in its own order.
+    const same = unfinished.find((job) => job.type === definition.type && JSON.stringify(definition.input.safeParse(job.input).data) === JSON.stringify(parsed));
+    if (same) return same.id;
+  }
   const job = await prisma.job.create({
     data: {
       type: definition.type,
       key: options.key,
       applicationId: options.applicationId,
-      input: definition.input.parse(input) as Prisma.InputJsonValue,
+      input: parsed,
     },
     select: { id: true },
   });

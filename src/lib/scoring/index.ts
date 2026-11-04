@@ -10,6 +10,7 @@ import { postingText, type FoundPosting } from "@/lib/job-search/search";
 import type { ProfileData } from "@/lib/profile";
 
 import { jevKey, loadScoringConfig, type ScoringConfig } from "./config";
+import { experienceAsked, withExperienceChecked } from "./experience-asked";
 import { scoreWithJev } from "./jev";
 
 // Scoring a posting against the profile (#208, #274), with whatever Settings →
@@ -40,13 +41,16 @@ export async function loadPostingScorer(): Promise<PostingScorer> {
     const jev = jevKey(config);
     if (jev.problem !== null) throw AiError.config(jev.problem);
     const { key } = jev;
-    return (posting, profile, signal) => scoreWithJev(posting, profile, { key, signal });
+    return async (posting, profile, signal) => {
+      const { data, scoredWith } = await scoreWithJev(posting, profile, { key, signal });
+      return { data: withExperienceChecked(data, experienceAsked(postingText(posting)), profile), scoredWith };
+    };
   }
   if (!(await isAiConfigured())) throw AiError.config(AI_PROVIDER_MISSING);
   const [provider, options] = await Promise.all([getAiProvider(), loadTaskOptions()]);
   return async (posting, profile, signal) => {
     const { title, company, place, remote, salary } = posting;
     const { data, promptVersion } = await scorePosting(provider, { posting: postingText(posting), title, company, place, remote, salary, profile }, { ...options, signal });
-    return { data, scoredWith: promptVersion };
+    return { data: withExperienceChecked(data, experienceAsked(postingText(posting)), profile), scoredWith: promptVersion };
   };
 }

@@ -32,7 +32,7 @@ describe("refineSuggestions (E8-5)", () => {
     };
     expect(refineSuggestions({ match, requirements, tone: "WARM", hasSummary: true })).toEqual({
       resume: ["Make the summary shorter", "Emphasize Design systems", "Mention Kubernetes"],
-      letter: ["Make it more formal", "Shorter, under 200 words", "Handle the Kubernetes gap differently"],
+      letter: ["Make it more formal", "Shorter, under 200 words", "Lead with Design systems"],
       email: ["Shorter, under 100 words", "Make it more formal", "Lead with Design systems"],
     });
   });
@@ -40,11 +40,15 @@ describe("refineSuggestions (E8-5)", () => {
   it("names a short gap by its text, and skips a long one", () => {
     const requirements = [requirement("Fintech experience"), requirement("Experience shipping payments products at scale")];
     const short = { items: [item(requirements[0].text, "gap")] };
-    expect(refineSuggestions({ match: short, requirements, tone: "WARM", hasSummary: true }).letter.at(-1)).toBe(
-      "Handle the fintech experience gap differently",
-    );
+    expect(refineSuggestions({ match: short, requirements, tone: "WARM", hasSummary: true }).resume.at(-1)).toBe("Mention fintech experience");
     const long = { items: [item(requirements[1].text, "gap")] };
-    expect(refineSuggestions({ match: long, requirements: requirements.slice(1), tone: "WARM", hasSummary: true }).letter).toHaveLength(2);
+    expect(refineSuggestions({ match: long, requirements: requirements.slice(1), tone: "WARM", hasSummary: true }).resume.at(-1)).toBe("Mention accessibility");
+  });
+
+  it("never suggests treating a gap as a weakness in the letter", () => {
+    const requirements = [requirement("Fintech experience")];
+    const { letter } = refineSuggestions({ match: { items: [item(requirements[0].text, "gap")] }, requirements, tone: "WARM", hasSummary: true });
+    expect(letter.join(" ")).not.toMatch(/gap/i);
   });
 
   it("falls back to the prototype's chips without a match", () => {

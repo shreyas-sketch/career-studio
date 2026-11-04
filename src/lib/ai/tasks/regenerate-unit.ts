@@ -5,6 +5,7 @@ import { SIGN_OFF_UNIT, type Extracted, type Unit } from "@/lib/application-data
 import { emailParts } from "@/lib/application-email";
 import { isFrameUnit } from "@/lib/letter-frame";
 import type { ProfileData } from "@/lib/profile";
+import { withoutInventedWeakness } from "@/lib/requirement-evidence";
 import { TONES } from "@/lib/tones";
 import { bulletLines, isBulletUnit } from "@/lib/unit-text";
 
@@ -116,6 +117,9 @@ export const regenerateUnit: Task<RegenerateInput, Unit> = async (provider, inpu
   // An English sign-off stays the tone's.
   const english = /^english$/i.test(options.language ?? extracted.language ?? "English");
   const updated = { ...unit, text: unit.id === SIGN_OFF_UNIT && english ? TONES[tone].signOff : text || unit.text };
+  if (kind === DocumentKind.COVER_LETTER && !isFrameUnit(unit.id) && unit.id !== SIGN_OFF_UNIT) {
+    updated.text = withoutInventedWeakness(updated.text, [...facts, ...profile.facts.map((fact) => fact.text)]) || unit.text;
+  }
   return {
     // The letter's recipient and greeting aren't claims about the candidate.
     data:

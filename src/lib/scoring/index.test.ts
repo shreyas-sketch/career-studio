@@ -56,7 +56,7 @@ describe("loadPostingScorer", () => {
     const provider = new MockProvider({ reply: () => ({ score: 72, reasons: ["Knows Figma."], redFlags: [] }) });
     state.provider = provider;
     const score = await loadPostingScorer();
-    expect(await score(posting, profile, signal)).toEqual({ data: { score: 72, reasons: ["Knows Figma."], redFlags: [] }, scoredWith: "score-posting@2" });
+    expect(await score(posting, profile, signal)).toEqual({ data: { score: 72, reasons: ["Knows Figma."], redFlags: [] }, scoredWith: "score-posting@3" });
     expect(provider.calls[0].messages[0].content).toContain("Ledgerly: Designer");
     expect(scoreWithJev).not.toHaveBeenCalled();
   });

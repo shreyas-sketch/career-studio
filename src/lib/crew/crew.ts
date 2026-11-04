@@ -101,6 +101,8 @@ export type CrewHandover = {
   what: string;
   about: string | null;
   href: string;
+  /** When it ended. */
+  at: string;
   /** Why it failed, written for the user; null when it didn't. */
   error: string | null;
   handsOver: boolean;

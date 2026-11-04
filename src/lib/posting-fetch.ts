@@ -19,13 +19,13 @@ import { appVersion } from "@/lib/version";
 
 export const FETCH_MESSAGES = {
   notWeb: "That link doesn't look like a web address.",
-  privateAddress: "Dossier doesn't fetch addresses on your own network. Paste the posting instead.",
+  privateAddress: "Career Studio doesn't fetch addresses on your own network. Paste the posting instead.",
   unreachable: "The job site couldn't be reached. Without internet access, or if the site blocks it, paste the posting instead.",
   failed: (status: number) => `The job site answered with an error (${status}). Paste the posting instead.`,
   tooBig: "That page is too big to be a job posting. Paste the posting instead.",
   notPage: "That link isn't a web page. Paste the posting instead.",
   unreadable:
-    "There's no posting text on that page that Dossier can read: the site probably builds it in the browser. Paste the posting instead.",
+    "There's no posting text on that page that Career Studio can read: the site probably builds it in the browser. Paste the posting instead.",
 };
 
 const TIMEOUT_MS = 10_000;
@@ -291,10 +291,19 @@ function jobPostingText(posting: JobPosting): string {
     remote,
     [posting.employmentType].flat().map(str).filter(Boolean).join(", ").toLowerCase().replaceAll("_", " "),
     salaryOf(posting.baseSalary),
+    experienceOf(posting.experienceRequirements),
     deadline && `Apply by ${deadline}`,
   ].filter(Boolean);
   const description = htmlText(str(posting.description));
   return [[company, title].filter(Boolean).join(": "), facts.join(" · "), description].filter(Boolean).join("\n\n");
+}
+
+/** schema.org's experienceRequirements: text, or months of experience. */
+function experienceOf(value: unknown): string {
+  const written = str(value);
+  if (written) return /\d/.test(written) ? `Experience asked: ${written.slice(0, 120)}` : "";
+  const months = value && typeof value === "object" ? Number((value as Record<string, unknown>).monthsOfExperience) : Number.NaN;
+  return months > 0 ? `Experience asked: at least ${Math.round((months / 12) * 10) / 10} years` : "";
 }
 
 /** "EUR 75000–90000 per year" from schema.org's MonetaryAmount. */

@@ -55,7 +55,7 @@ export function refineSuggestions({
     letter: [
       tone === Tone.FORMAL ? "Make it warmer" : "Make it more formal",
       "Shorter, under 200 words",
-      ...(gap ? [`Handle the ${gap} gap differently`] : []),
+      ...(strongest ? [`Lead with ${strongest}`] : []),
     ],
     email: [
       "Shorter, under 100 words",

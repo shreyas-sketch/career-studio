@@ -12,7 +12,7 @@ import { SourceError } from "./http";
 import { placeOf } from "./place";
 import { fetchHnStartups } from "./sources/hn";
 import { fetchYcStartups } from "./sources/yc";
-import { lookUpStartup, rescoreStartups, sweepStartups, upsertStartups } from "./store";
+import { lookUpStartup, rereadHnStartups, rescoreStartups, sweepStartups, upsertStartups } from "./store";
 import { STARTUP_SOURCE_INFO, startupsRefreshSchema, type FoundStartup, type StartupSource, type StartupsRefresh } from "./types";
 
 // "Refresh" on the Startups screen (#222), and once a day while the screen
@@ -52,6 +52,7 @@ export async function refreshStartups(
 
   await step(`Scoring ${found.length} ${found.length === 1 ? "startup" : "startups"} against your profile`);
   const added = await upsertStartups(found, now);
+  await rereadHnStartups();
   // Ones this refresh didn't find again are scored against today's profile too.
   await rescoreStartups(now);
   await sweepStartups(now);

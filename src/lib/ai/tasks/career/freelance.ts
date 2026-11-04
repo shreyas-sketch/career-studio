@@ -7,7 +7,7 @@ import { NO_EM_DASHES, postingForPrompt, profileForPrompt, system, UNTRUSTED_POS
 // The freelance finder's fit check (agent 5): is this opportunity worth the
 // user's time, given their skills, rate floor, availability and constraints.
 
-export const SCORE_OPPORTUNITY_VERSION = "score-opportunity@1";
+export const SCORE_OPPORTUNITY_VERSION = "score-opportunity@2";
 
 export const fitSchema = z.object({
   score: z.number().transform((value) => Math.min(100, Math.max(0, Math.round(Number.isFinite(value) ? value : 0)))),
@@ -41,7 +41,10 @@ export const scoreOpportunity: Task<ScoreOpportunityInput, OpportunityFit> = asy
 - reasons: up to four specific matches between the listing and their profile or preferences.
 - gaps: what the listing asks for that their profile doesn't show.
 - concerns: practical concerns: pay below their floor or not stated, hours beyond their availability, location or time-zone limits they can't meet, a full-time employee role dressed up as a contract, vague scope, or anything they said they avoid.
-Use only what the listing and profile say; never invent the client's budget, reputation or competition.`,
+Use only what the listing and profile say; never invent the client's budget, reputation or competition.
+- Languages: count only those the profile lists. A profile written in a language doesn't show proficiency in it. If the listing asks for a language the profile doesn't list, that's a gap.
+- Rate and availability: if neither the listing nor their preferences say, they're unknown. Say so as a concern, never as a match.
+- Seniority: never call them senior, expert or a lead unless their profile says so.`,
       UNTRUSTED_POSTING,
       NO_EM_DASHES,
     ),

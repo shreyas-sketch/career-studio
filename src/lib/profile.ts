@@ -238,6 +238,12 @@ export function sameName(a: string, b: string): boolean {
   return a.trim().localeCompare(b.trim(), undefined, { sensitivity: "accent" }) === 0;
 }
 
+/** The same skill however it's written: "Node.js" and "NodeJS", "CI/CD" and "CICD", but never "C" and "C++". */
+export function sameSkill(a: string, b: string): boolean {
+  const key = (name: string) => name.trim().toLowerCase().replace(/[\s._/-]+/g, "");
+  return key(a) === key(b);
+}
+
 /** Months of experience in the profile, counting overlapping roles once. */
 export function experienceMonths(profile: Pick<ProfileData, "experience">, today: Date): number {
   const now = today.getFullYear() * 12 + today.getMonth();

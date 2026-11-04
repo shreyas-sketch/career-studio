@@ -18,7 +18,8 @@ const FILTERS = ["open", "saved", "pursuing", "dismissed"] as const;
 export default async function FreelancePage({ searchParams }: PageProps<"/freelance">) {
   const params = await searchParams;
   const filter = FILTERS.find((value) => value === params.show) ?? "open";
-  const [prefs, profile, opportunities, aiReady, jobId] = await Promise.all([loadFreelancePrefs(), loadProfile(), listOpportunities(filter), isAiConfigured(), openJob(FREELANCE_REFRESH_KEY)]);
+  const [prefs, profile, aiReady, jobId] = await Promise.all([loadFreelancePrefs(), loadProfile(), isAiConfigured(), openJob(FREELANCE_REFRESH_KEY)]);
+  const opportunities = await listOpportunities(filter, { keywords: searchKeywords(prefs, profile), prefs, profile });
 
   return (
     <>
@@ -51,6 +52,7 @@ export default async function FreelancePage({ searchParams }: PageProps<"/freela
             score: row.score,
             fit: row.fit,
             status: row.status,
+            relevance: row.relevance,
           }))}
         />
       </Screen>

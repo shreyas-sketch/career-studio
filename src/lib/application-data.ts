@@ -42,10 +42,10 @@ export const unitsSchema = z
 export const requirementSchema = z.object({
   /** In the posting's words, shortened, e.g. "5+ years of product design". */
   text: z.string(),
-  kind: z.enum(["skill", "years", "language", "other"]),
+  kind: z.enum(["skill", "years", "language", "education", "other"]),
   /** For a skill: its short name, e.g. "Figma". */
   skill: z.string().nullable(),
-  /** For an amount of experience: the years asked for. */
+  /** For an amount of experience: the least asked for (0 for "0-2 years"). */
   years: z.number().nullable(),
   /** For a spoken language: its English name, e.g. "Dutch". */
   language: z.string().nullable(),
@@ -102,12 +102,17 @@ export function extractedOf(application: {
 }
 
 /**
- * How a requirement matches the profile (NEW-4): covered (the skill is used in
- * a role), partial (the skill is in the profile but not attached to a role)
- * or gap (not in the profile).
+ * How a requirement matches the profile (NEW-4): covered (the profile shows
+ * it), partial (it may, but not clearly) or gap. A gap's basis says which kind:
+ * the profile not mentioning something says nothing about the candidate, and
+ * only an unmet one (fewer years, a lower degree) is known not to fit.
  */
 export const matchResults = ["covered", "partial", "gap"] as const;
 export type MatchResult = (typeof matchResults)[number];
+
+/** Stored by earlier versions; a gap isn't something to confess in a letter. */
+const OLD_GAP_NOTE = "Nothing in your profile, so I'll address it honestly in the letter";
+export const NOT_SHOWN_NOTE = "Your profile doesn't mention this. Add it if it applies.";
 
 export const matchItemSchema = z.object({
   requirement: z.string(),
@@ -116,8 +121,15 @@ export const matchItemSchema = z.object({
   skill: z.string().nullable(),
   /** The roles where that skill was used. */
   experienceIds: z.array(z.string()),
-  /** A short explanation, e.g. "Nothing in your profile, so I'll address it honestly in the letter". */
-  note: z.string().nullable(),
+  /** A short explanation, e.g. "Your profile doesn't mention this. Add it if it applies.". */
+  note: z
+    .string()
+    .nullable()
+    .transform((note) => (note === OLD_GAP_NOTE ? NOT_SHOWN_NOTE : note)),
+  /** For a gap: "unmet" when the profile shows it isn't met, else it just isn't mentioned. */
+  basis: z.enum(["not-shown", "unmet"]).optional(),
+  /** What in the profile backs it, each quote checked against the profile. */
+  evidence: z.array(z.object({ source: z.string(), quote: z.string() })).optional(),
 });
 
 /** Application.match */

@@ -5,6 +5,7 @@ import { SIGN_OFF_UNIT, type Extracted, type Unit, type UnitEdit } from "@/lib/a
 import { emailParts } from "@/lib/application-email";
 import { isFrameUnit } from "@/lib/letter-frame";
 import type { ProfileData } from "@/lib/profile";
+import { withoutInventedWeakness } from "@/lib/requirement-evidence";
 import { TONES } from "@/lib/tones";
 import { isPublicationUnit } from "@/lib/unit-text";
 
@@ -117,7 +118,9 @@ export const refineChat: Task<RefineInput, Refinement> = async (provider, input,
   if (!answer.declined) {
     for (const edit of answer.edits) {
       const unit = documents[edit.document].find((entry) => entry.id === edit.unitId);
-      const text = edit.text.trim();
+      // What the candidate asks for here is in their own words; nothing else can admit a weakness for them.
+      const written = edit.text.trim();
+      const text = edit.document === DocumentKind.RESUME ? written : withoutInventedWeakness(written, [request, ...facts, ...profile.facts.map((fact) => fact.text)]);
       // A publication stays as the candidate wrote it (#218).
       if (unit && text && text !== unit.text && !isPublicationUnit(unit.id)) {
         // E6-6: in strict mode, note what the profile and posting don't back.

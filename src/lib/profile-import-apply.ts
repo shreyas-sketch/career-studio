@@ -2,7 +2,7 @@ import "server-only";
 
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { citationText } from "@/lib/citation";
-import { BASICS_FIELDS, sameName } from "@/lib/profile";
+import { BASICS_FIELDS, sameName, sameSkill } from "@/lib/profile";
 import type { ImportedProfile, ImportMode } from "@/lib/profile-import";
 import { settingsFromRows } from "@/lib/settings";
 import { saveSettings } from "@/lib/settings-data";
@@ -107,12 +107,14 @@ export async function applyImportedProfile(db: PrismaClient, profile: ImportedPr
   );
 }
 
-/** Finds or creates each skill (names ignore case); answers with the ids by lower-case name. */
+/** Finds or creates each skill, however it's written (sameSkill); answers with the ids by lower-case name. */
 async function applySkills(tx: Tx, profile: ImportedProfile): Promise<Map<string, string>> {
   const ids = new Map<string, string>();
   let sort = ((await tx.skill.aggregate({ _max: { sort: true } }))._max.sort ?? -1) + 1;
+  const known = await tx.skill.findMany({ select: { id: true, name: true } });
   for (const { name } of profile.skills) {
-    const skill = (await tx.skill.findUnique({ where: { name } })) ?? (await tx.skill.create({ data: { name, sort: sort++ } }));
+    const skill = known.find((existing) => sameSkill(existing.name, name)) ?? (await tx.skill.create({ data: { name, sort: sort++ }, select: { id: true, name: true } }));
+    if (!known.includes(skill)) known.push(skill);
     ids.set(name.toLowerCase(), skill.id);
   }
   return ids;
@@ -122,7 +124,7 @@ async function applySkills(tx: Tx, profile: ImportedProfile): Promise<Map<string
 async function applyLanguages(tx: Tx, profile: ImportedProfile): Promise<void> {
   let sort = ((await tx.language.aggregate({ _max: { sort: true } }))._max.sort ?? -1) + 1;
   for (const { name, level, levelGiven } of profile.languages) {
-    const existing = await tx.language.findUnique({ where: { name } });
+    const existing = (await tx.language.findMany()).find((language) => sameName(language.name, name));
     if (!existing) await tx.language.create({ data: { name, level, sort: sort++ } });
     else if (levelGiven) await tx.language.update({ where: { id: existing.id }, data: { level } });
   }

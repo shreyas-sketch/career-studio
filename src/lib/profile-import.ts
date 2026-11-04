@@ -19,6 +19,8 @@ const unverified = z.array(z.string());
 
 export const importedProfileSchema = z.object({
   basics: z.partialRecord(z.enum(BASICS_FIELDS), z.string()),
+  /** Links in the file that no field holds, for the preview to show. Absent in older readings. */
+  otherLinks: z.array(z.string()).default([]),
   skills: z.array(z.object({ name: z.string(), found: z.boolean() })),
   languages: z.array(z.object({ name: z.string(), level: z.enum(LanguageLevel), levelGiven: z.boolean() })),
   experience: z.array(

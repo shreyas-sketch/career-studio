@@ -1,6 +1,6 @@
 import type { ProfileData } from "@/lib/profile";
 
-import { reach, type Place } from "./place";
+import { reach, workMode, type Place } from "./place";
 import { headerParts } from "./text";
 import type { FoundStartup } from "./types";
 
@@ -86,6 +86,12 @@ export function matchStartup(
     reasons.push("Remote (where from isn't said)");
   } else if (where.remote && where.remoteOnly) {
     reasons.push(`Remote only for ${where.remoteOnly}`);
+  }
+
+  // Tied to a place: said outright, so it isn't read as remote.
+  const mode = workMode(whereText(startup));
+  if ((mode === "onsite" || mode === "hybrid") && where.here === null && startup.location) {
+    reasons.push(`${mode === "onsite" ? "Onsite" : "Partly onsite"}: ${startup.location}`);
   }
 
   // How fresh it is.

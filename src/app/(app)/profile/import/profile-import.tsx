@@ -288,6 +288,11 @@ function Preview({ profile }: { profile: ImportedProfile }) {
         </Section>
       )}
 
+      {profile.otherLinks.length > 0 && (
+        <p role="note" className="rounded-card bg-surface px-4 py-3 text-meta text-pretty text-muted">
+          Also in your file, for you to add where they belong: {profile.otherLinks.join(", ")}
+        </p>
+      )}
       {profile.projects.length > 0 && (
         <Section title="Projects">
           {profile.projects.map((entry, index) => (

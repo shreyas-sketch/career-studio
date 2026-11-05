@@ -9,6 +9,19 @@ import { Input } from "@/components/ui/input";
 
 type Intake = { open: boolean; reason: "ok" | "disabled" | "paused" };
 
+type Session = { formToken: string; intake: Intake };
+
+/** A guest cookie (made by the server if there's none) and a fresh form token. */
+async function openSession(): Promise<Session | null> {
+  try {
+    const response = await fetch("/api/public/fde/session", { method: "POST", cache: "no-store" });
+    if (!response.ok) return null;
+    return (await response.json()) as Session;
+  } catch {
+    return null;
+  }
+}
+
 /** A key for this one click, so a double click, a retry or a slow network never starts two reports. */
 const newClientKey = () => (crypto.randomUUID?.() ?? `${Date.now()}${Math.random()}`).replace(/[^A-Za-z0-9]/g, "").slice(0, 32);
 
@@ -23,20 +36,22 @@ export function StartForm({ initialIntake }: { initialIntake: Intake }) {
   const clientKey = useRef(newClientKey());
   const honeypot = useRef<HTMLInputElement>(null);
 
-  const startSession = async () => {
-    try {
-      const response = await fetch("/api/public/fde/session", { method: "POST", cache: "no-store" });
-      if (!response.ok) throw new Error();
-      const data = (await response.json()) as { formToken: string; intake: Intake };
-      setToken(data.formToken);
-      setIntake(data.intake);
-    } catch {
-      setError({ text: "Couldn't reach the server. Check your connection and reload the page." });
-    }
+  const apply = (session: Session | null) => {
+    if (!session) return setError({ text: "Couldn't reach the server. Check your connection and reload the page." });
+    setToken(session.formToken);
+    setIntake(session.intake);
   };
+  const startSession = async () => apply(await openSession());
 
   useEffect(() => {
-    void startSession();
+    let live = true;
+    void openSession().then((session) => {
+      if (live) apply(session);
+    });
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the page opens
   }, []);
 
   const submit = async (event: React.FormEvent) => {

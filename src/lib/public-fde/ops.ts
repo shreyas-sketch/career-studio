@@ -44,6 +44,9 @@ export async function updateControls(change: ControlsChange, by: string): Promis
     [JSON.stringify(next), by.slice(0, 120)],
   );
   cache = null;
+  // Resuming a lane lets the reports that waited while it was paused go straight away, in their order.
+  const resumed = [current.profilePaused && !next.profilePaused ? "profile_queued" : null, current.analysisPaused && !next.analysisPaused ? "analysis_queued" : null].filter(Boolean);
+  if (resumed.length > 0) await q(`UPDATE ${Q}.jobs SET not_before = now() WHERE stage = ANY($1::text[]) AND not_before > now()`, [resumed]);
   return next;
 }
 

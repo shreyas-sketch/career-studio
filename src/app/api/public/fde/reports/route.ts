@@ -42,7 +42,7 @@ export const POST = publicRoute(async (request) => {
   const result = await submitReport({ guestId, url: parsed.data.url, clientKey: parsed.data.clientKey ?? null, ipHash: hashIp(clientIp(request.headers)) });
   if (!result.ok) {
     if (result.code === "invalid_url") return json({ error: result.message, field: "url" }, 422);
-    const retryAfter = "retryAfter" in result ? { "retry-after": String(result.retryAfter) } : {};
+    const retryAfter: Record<string, string> = "retryAfter" in result ? { "retry-after": String(result.retryAfter) } : {};
     return json({ error: REFUSALS[result.code], code: result.code }, result.status, retryAfter);
   }
   const location = `/fde-review/r/${result.id}`;

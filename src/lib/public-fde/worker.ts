@@ -168,36 +168,42 @@ export async function runAnalysisLane(job: JobRow, signal: AbortSignal): Promise
  * (their pages say so) and then reuse it. Fifty visitors make one crawl.
  */
 export async function ensureSharedBenchmark(jobId: string | null, signal: AbortSignal): Promise<void> {
-  const ready = await asPublicTenant(() => prisma.fdeBenchmark.findFirst({ where: { scopeKey: scopeKeyOf(PUBLIC_FILTERS), rubricVersion: RUBRIC_VERSION, expiresAt: { gt: new Date() } }, select: { id: true } }));
-  if (ready) return;
+  const ready = () => asPublicTenant(() => prisma.fdeBenchmark.findFirst({ where: { scopeKey: scopeKeyOf(PUBLIC_FILTERS), rubricVersion: RUBRIC_VERSION, expiresAt: { gt: new Date() } }, select: { id: true } }));
+  if (await ready()) return;
   if (jobId) await noteStage(jobId, "discovering_roles", "running", "Preparing the shared market sample that every report in this session uses");
-  const client = await queuePool().connect();
-  try {
-    for (;;) {
-      if (signal.aborted) throw signal.reason;
-      const { rows } = await client.query<{ got: boolean }>(`SELECT pg_try_advisory_lock(hashtext('public-fde-benchmark')) AS got`);
-      if (rows[0]?.got) break;
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
+  // Waiters don't hold a connection while they wait: only the builder keeps one, for its lock.
+  let holder: Awaited<ReturnType<ReturnType<typeof queuePool>["connect"]>> | null = null;
+  while (!holder) {
+    if (signal.aborted) throw signal.reason;
+    const client = await queuePool().connect();
+    const { rows } = await client.query<{ got: boolean }>(`SELECT pg_try_advisory_lock(hashtext('public-fde-benchmark')) AS got`).catch(() => ({ rows: [] as { got: boolean }[] }));
+    if (rows[0]?.got) {
+      holder = client;
+      break;
     }
-    try {
-      const marketLedger = new JobLedger(null, MARKET_CAP_MICRO);
-      await respectCooldown("treg", "market", signal, 5 * 60_000);
-      await asPublicTenant(() =>
-        ensureBenchmark(PUBLIC_FILTERS, {
-          meter: new PublicMeter(null, marketLedger, "market"),
-          ai: publicModel(marketLedger),
-          signal,
-          isFatal: isServiceFailure,
-          onProgress: async (detail) => {
-            if (jobId) await noteStage(jobId, "discovering_roles", "running", detail);
-          },
-        }),
-      );
-    } finally {
-      await client.query(`SELECT pg_advisory_unlock(hashtext('public-fde-benchmark'))`).catch(() => {});
-    }
-  } finally {
     client.release();
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+    // Built by whoever held the lock while this one waited.
+    if (await ready()) return;
+  }
+  try {
+    if (await ready()) return;
+    const marketLedger = new JobLedger(null, MARKET_CAP_MICRO);
+    await respectCooldown("treg", "market", signal, 5 * 60_000);
+    await asPublicTenant(() =>
+      ensureBenchmark(PUBLIC_FILTERS, {
+        meter: new PublicMeter(null, marketLedger, "market"),
+        ai: publicModel(marketLedger),
+        signal,
+        isFatal: isServiceFailure,
+        onProgress: async (detail) => {
+          if (jobId) await noteStage(jobId, "discovering_roles", "running", detail);
+        },
+      }),
+    );
+  } finally {
+    await holder.query(`SELECT pg_advisory_unlock(hashtext('public-fde-benchmark'))`).catch(() => {});
+    holder.release();
   }
 }
 

@@ -24,8 +24,15 @@ export default defineConfig({
     { name: "setup", testMatch: /setup\.ts$/ },
     {
       name: "chromium",
+      testIgnore: /public-fde\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"], viewport: { width: 1400, height: 900 }, storageState: STORAGE_STATE },
       dependencies: ["setup"],
+    },
+    // The public FDE review is used signed out, so it doesn't wait for the sign-in setup.
+    {
+      name: "public",
+      testMatch: /public-fde\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
     },
   ],
   webServer: [

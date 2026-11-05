@@ -69,7 +69,8 @@ export async function respectCooldown(provider: Upstream, service: ServiceBusy["
   const wait = until.getTime() - Date.now();
   if (wait <= 0) return;
   if (wait > maxWaitMs) throw new ServiceBusy(service, wait, `${provider} cooling down`);
-  await sleep(jitter(wait), signal);
+  // Never before the cool-down ends, and spread out after it so waiters don't all call at once.
+  await sleep(wait + Math.round(Math.random() * Math.min(wait * 0.25, 5_000)), signal);
 }
 
 /**

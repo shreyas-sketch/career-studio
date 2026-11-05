@@ -20,8 +20,8 @@ export const publicFdeConfig = () => ({
   apiKey: env.ANTHROPIC_API_KEY ?? null,
   model: env.PUBLIC_FDE_MODEL || DEFAULT_PUBLIC_MODEL,
   anthropicBaseUrl: env.PUBLIC_FDE_ANTHROPIC_TEST_BASE_URL ?? "https://api.anthropic.com",
-  dailyBudgetMicro: Math.round((env.PUBLIC_FDE_DAILY_BUDGET_USD ?? 10) * USD),
-  reservePerReportMicro: Math.round((env.PUBLIC_FDE_RESERVE_PER_REPORT_USD ?? 0.2) * USD),
+  dailyBudgetMicro: Math.round((env.PUBLIC_FDE_DAILY_BUDGET_USD ?? 100) * USD),
+  reservePerReportMicro: Math.round((env.PUBLIC_FDE_RESERVE_PER_REPORT_USD ?? 0.5) * USD),
   // Claude Haiku 5.5's published price for prompts up to 100K tokens, in dollars per million tokens.
   inputUsdPerMTok: env.PUBLIC_FDE_INPUT_USD_PER_MTOK ?? 0.1,
   outputUsdPerMTok: env.PUBLIC_FDE_OUTPUT_USD_PER_MTOK ?? 0.5,
@@ -30,9 +30,9 @@ export const publicFdeConfig = () => ({
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean),
   retentionHours: env.PUBLIC_FDE_RETENTION_HOURS ?? 72,
-  guestDailyReports: env.PUBLIC_FDE_GUEST_DAILY_REPORTS ?? 2,
-  maxOpenReports: env.PUBLIC_FDE_MAX_OPEN_REPORTS ?? 80,
-  ipHourly: env.PUBLIC_FDE_IP_HOURLY ?? 60,
+  guestDailyReports: env.PUBLIC_FDE_GUEST_DAILY_REPORTS ?? 3,
+  maxOpenReports: env.PUBLIC_FDE_MAX_OPEN_REPORTS ?? 300,
+  ipHourly: env.PUBLIC_FDE_IP_HOURLY ?? 300,
 });
 
 /** How many run at once, by lane, until an operator changes it on the live page. */

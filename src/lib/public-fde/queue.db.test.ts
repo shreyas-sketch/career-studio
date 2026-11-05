@@ -202,20 +202,21 @@ describe("isolation", () => {
 });
 
 describe("limits", () => {
-  it("lets one browser start 2 reports a day, and gives the same report back for the same address", async () => {
+  it("lets one browser start 3 reports a day, and gives the same report back for the same address", async () => {
     const guest = newGuestId();
     const first = await submitReport({ guestId: guest, url: profileUrl("fixture-full"), clientKey: null, ipHash: "x" });
     const again = await submitReport({ guestId: guest, url: profileUrl("fixture-full"), clientKey: null, ipHash: "x" });
     const second = await submitReport({ guestId: guest, url: profileUrl("fixture-long"), clientKey: null, ipHash: "x" });
     const third = await submitReport({ guestId: guest, url: profileUrl("fixture-partial"), clientKey: null, ipHash: "x" });
+    const fourth = await submitReport({ guestId: guest, url: profileUrl("fixture-no-photo"), clientKey: null, ipHash: "x" });
     expect(first.ok && again.ok && first.id === again.id && again.reused).toBe(true);
-    expect(second.ok).toBe(true);
-    expect(third).toMatchObject({ ok: false, code: "guest_quota", status: 429 });
+    expect(second.ok && third.ok).toBe(true);
+    expect(fourth).toMatchObject({ ok: false, code: "guest_quota", status: 429 });
   });
 
   it("refuses a report the day's budget can't cover, counting what's set aside for queued ones", async () => {
-    // $9.70 already spent today against the default $10 budget; each report sets $0.20 aside.
-    await q(`INSERT INTO ${Q}.spend (day, kind, cost_micro) VALUES (current_date, 'model', 9700000)`);
+    // $99.30 already spent today against the default $100 budget; each report sets $0.50 aside.
+    await q(`INSERT INTO ${Q}.spend (day, kind, cost_micro) VALUES (current_date, 'model', 99300000)`);
     const one = await submitReport({ guestId: newGuestId(), url: profileUrl("fixture-full"), clientKey: null, ipHash: "x" });
     const two = await submitReport({ guestId: newGuestId(), url: profileUrl("fixture-full"), clientKey: null, ipHash: "x" });
     expect(one.ok).toBe(true);

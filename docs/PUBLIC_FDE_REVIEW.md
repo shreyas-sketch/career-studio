@@ -91,15 +91,15 @@ Set on the Railway service (Variables), server only, never `NEXT_PUBLIC_`:
 | `TREG_API_TOKEN` | none | Required for profile reads and LinkedIn job search (already used by the private review). |
 | `PUBLIC_FDE_MODEL` | `claude-haiku-5-5` | |
 | `PUBLIC_FDE_ENABLED` | `1` | `0` closes the page and its API. |
-| `PUBLIC_FDE_DAILY_BUDGET_USD` | `10` | Model + data spend per day, all visitors together. |
-| `PUBLIC_FDE_RESERVE_PER_REPORT_USD` | `0.20` | Set aside per accepted report; also its hard ceiling. |
+| `PUBLIC_FDE_DAILY_BUDGET_USD` | `100` | Model + data spend per day, all visitors together. |
+| `PUBLIC_FDE_RESERVE_PER_REPORT_USD` | `0.50` | Set aside per accepted report; also its hard ceiling. |
 | `PUBLIC_FDE_ADMIN_EMAILS` | `becomefde@gmail.com` | Accounts that may open `/fde/live`. |
 | `PUBLIC_FDE_RETENTION_HOURS` | `72` | |
-| `PUBLIC_FDE_GUEST_DAILY_REPORTS` | `2` | Per browser per day. |
-| `PUBLIC_FDE_MAX_OPEN_REPORTS` | `80` | Queued + running at once. |
-| `PUBLIC_FDE_IP_HOURLY` | `60` | Per network per hour. |
+| `PUBLIC_FDE_GUEST_DAILY_REPORTS` | `3` | Per browser per day. |
+| `PUBLIC_FDE_MAX_OPEN_REPORTS` | `300` | Queued + running at once. |
+| `PUBLIC_FDE_IP_HOURLY` | `300` | Per network per hour. |
 | `PUBLIC_FDE_WORKER` | `1` | `0` on a replica that should only serve pages. |
-| `FDE_DAILY_SPEND_LIMIT_USD` | `1` | Existing: paid data calls for the whole server per day, private and public together. 50 profile reads use about $0.35 of it. |
+| `FDE_DAILY_SPEND_LIMIT_USD` | `25` | Existing: paid data calls for the whole server per day, private and public together. 50 profile reads use about $0.35 of it. |
 
 ## Costs (estimates, not measured live)
 

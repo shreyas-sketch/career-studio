@@ -12,7 +12,7 @@ export const USD = 1_000_000;
 
 export const fdeConfig = () => ({
   runSpendLimitMicro: Math.round((env.FDE_RUN_SPEND_LIMIT_USD ?? 0.1) * USD),
-  dailySpendLimitMicro: Math.round((env.FDE_DAILY_SPEND_LIMIT_USD ?? 1) * USD),
+  dailySpendLimitMicro: Math.round((env.FDE_DAILY_SPEND_LIMIT_USD ?? 25) * USD),
   accountDailyReports: env.FDE_ACCOUNT_DAILY_REPORTS ?? 10,
   shortlistSize: env.FDE_SHORTLIST_SIZE ?? 10,
   benchmarkMaxAgeHours: env.FDE_BENCHMARK_MAX_AGE_HOURS ?? 24,

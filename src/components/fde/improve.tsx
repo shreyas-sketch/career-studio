@@ -141,7 +141,8 @@ export function Suggestions({ result }: { result: ReportResult }) {
   );
 }
 
-export function LearningPlanView({ reportId, result, initial }: { reportId: string; result: ReportResult; initial: string[] }) {
+/** `persist` off keeps ticks in this page only, e.g. for the public review, which has no account to save them to. */
+export function LearningPlanView({ reportId, result, initial, persist = true }: { reportId: string; result: ReportResult; initial: string[]; persist?: boolean }) {
   const [done, setDone] = useState(() => new Set(initial));
   const [, start] = useTransition();
   const plan = result.plan;
@@ -150,7 +151,7 @@ export function LearningPlanView({ reportId, result, initial }: { reportId: stri
   return (
     <div className="flex flex-col gap-5">
       <p className="max-w-[720px] text-sm text-pretty">
-        To build: <span className="font-medium">{plan.skill}</span>. {plan.totalHours} hours in all, within {plan.hoursPerWeek} hours a week for {plan.weeks} weeks. This is future work, not experience: ticking a step records progress here and doesn&apos;t change any score.
+        To build: <span className="font-medium">{plan.skill}</span>. {plan.totalHours} hours in all, within {plan.hoursPerWeek} hours a week for {plan.weeks} weeks. This is future work, not experience: ticking a step {persist ? "records progress here" : "marks it on this page only"} and doesn&apos;t change any score.
       </p>
       <ol className="flex flex-col gap-5">
         {plan.plan.phases.map((phase) => (
@@ -178,9 +179,11 @@ export function LearningPlanView({ reportId, result, initial }: { reportId: stri
                         else next.delete(step.id);
                         return next;
                       });
-                      start(async () => {
-                        toastResult(await setLearningStep({ id: reportId, stepId: step.id, done: checked }));
-                      });
+                      if (persist) {
+                        start(async () => {
+                          toastResult(await setLearningStep({ id: reportId, stepId: step.id, done: checked }));
+                        });
+                      }
                     }}
                   />
                 </li>

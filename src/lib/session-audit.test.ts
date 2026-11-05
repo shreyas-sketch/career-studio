@@ -25,6 +25,13 @@ const OPEN_ROUTES = new Set([
   "src/app/api/oauth/token/route.ts",
 ]);
 
+// The public FDE Review (docs/PUBLIC_FDE_REVIEW.md): signed out by design.
+// Its route handlers go through publicRoute() instead, which checks the same
+// origin and runs in the service tenant, and every read checks the visitor's
+// own guest cookie. Its pages only read through src/lib/public-fde.
+const PUBLIC_FDE_ROUTES = "src/app/api/public/fde/";
+const PUBLIC_FDE_PAGES = "src/app/fde-review/";
+
 const sources = globSync("src/**/*.{ts,tsx}").filter((file) => !/\.test\.tsx?$/.test(file) && !file.startsWith("src/generated/"));
 const read = (file: string) => readFileSync(file, "utf8");
 const isActionFile = (source: string) => /^\s*["']use server["'];?/.test(source);
@@ -63,6 +70,7 @@ describe("session checks (E11-5)", () => {
         !file.startsWith("src/app/(app)/") &&
         !file.startsWith("src/app/login/") &&
         !file.startsWith("src/app/signup/") &&
+        !file.startsWith(PUBLIC_FDE_PAGES) &&
         !/await (verifySession|verifyPrintAccess)\(/.test(read(file)),
     );
     expect(unchecked).toEqual([]);
@@ -90,12 +98,31 @@ describe("session checks (E11-5)", () => {
 
   it("defines every route handler with route()", () => {
     const unchecked = globSync("src/app/**/route.ts")
-      .filter((file) => !OPEN_ROUTES.has(file))
+      .filter((file) => !OPEN_ROUTES.has(file) && !file.startsWith(PUBLIC_FDE_ROUTES))
       .flatMap((file) =>
         exportsOf(read(file))
           .filter(([, name, wrapper]) => /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$/.test(name) && wrapper !== "route")
           .map(([line]) => `${file}: ${line}`),
       );
     expect(unchecked).toEqual([]);
+  });
+
+  it("keeps the public FDE Review to its own wrapper, tenant and guest checks", () => {
+    const routes = globSync(`${PUBLIC_FDE_ROUTES}**/route.ts`);
+    expect(routes.length).toBeGreaterThanOrEqual(5);
+    const unwrapped = routes.flatMap((file) =>
+      exportsOf(read(file))
+        .filter(([, name, wrapper]) => /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$/.test(name) && wrapper !== "publicRoute")
+        .map(([line]) => `${file}: ${line}`),
+    );
+    expect(unwrapped).toEqual([]);
+    const wrapper = read("src/lib/public-fde/http.ts");
+    expect(wrapper).toContain("if (!isSameOrigin(request))");
+    expect(wrapper).toContain("asPublicTenant(() => handler(request, context))");
+    // Public pages never reach the database client themselves, and never resolve an account.
+    const pages = globSync(`${PUBLIC_FDE_PAGES}**/*.tsx`);
+    expect(pages.filter((file) => /@\/lib\/prisma|getSession|verifySession/.test(read(file)))).toEqual([]);
+    // And the proxy opens exactly these two prefixes.
+    expect(read("src/proxy.ts")).toContain("const PUBLIC_FDE_PATHS = /^\\/(?:fde-review(?:\\/|$)|api\\/public\\/fde(?:\\/|$))/;");
   });
 });

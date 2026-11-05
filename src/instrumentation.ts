@@ -42,6 +42,24 @@ export async function register() {
     const { startStartupsSchedule } = await import("@/lib/startups/schedule");
     startStartupsSchedule();
 
+    // The public FDE Review's queue (docs/PUBLIC_FDE_REVIEW.md): its schema and
+    // service tenant, then this process's worker, which picks up anything a
+    // previous process left queued or running.
+    if (process.env.PUBLIC_FDE_ENABLED !== "0") {
+      try {
+        const { ensureQueueSchema } = await import("@/lib/public-fde/db");
+        const { ensurePublicTenant } = await import("@/lib/public-fde/tenant");
+        await ensureQueueSchema();
+        await ensurePublicTenant();
+        if (process.env.PUBLIC_FDE_WORKER !== "0") {
+          const { startPublicFdeWorker } = await import("@/lib/public-fde/worker");
+          startPublicFdeWorker();
+        }
+      } catch (error) {
+        logServerError("public FDE startup", error);
+      }
+    }
+
     // Expired sign-ins are cleared out daily.
     const { sweepExpiredSessions } = await import("@/lib/auth/session");
     setInterval(() => void sweepExpiredSessions().catch(() => {}), 24 * 60 * 60 * 1000).unref?.();

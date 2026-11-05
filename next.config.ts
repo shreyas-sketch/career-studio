@@ -44,6 +44,24 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()" },
         ],
       },
+      // The public FDE Review: never indexed, never cached by a shared cache,
+      // and it tells no other site where a visitor came from.
+      {
+        source: "/fde-review/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
+      {
+        source: "/fde-review",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
       // Browsers ignore COOP over plain HTTP (except on localhost) and say so
       // in the console, so it's only sent behind HTTPS.
       {

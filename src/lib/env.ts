@@ -171,6 +171,27 @@ const schema = z.object({
   FDE_FIXTURE_MODE: optional(z.enum(["0", "1"], { error: "FDE_FIXTURE_MODE must be 0 or 1." })),
   // For the end-to-end tests only: sends Treg's requests to <url> instead.
   TREG_TEST_BASE_URL: optional(z.url({ protocol: /^https?$/, error: "TREG_TEST_BASE_URL must be an http:// or https:// URL." })),
+  // The public FDE Review at /fde-review (docs/PUBLIC_FDE_REVIEW.md). Anonymous
+  // visitors run on the server's own key and model, never on an account's
+  // settings. None of these reach a browser.
+  PUBLIC_FDE_ENABLED: optional(z.enum(["0", "1"], { error: "PUBLIC_FDE_ENABLED must be 0 or 1." })),
+  ANTHROPIC_API_KEY: optional(z.string().min(20, { error: "ANTHROPIC_API_KEY looks too short to be an Anthropic API key." })),
+  PUBLIC_FDE_MODEL: optional(z.string().trim().min(3, { error: "PUBLIC_FDE_MODEL must be a model id such as claude-haiku-5-5." })),
+  PUBLIC_FDE_DAILY_BUDGET_USD: optional(z.coerce.number().positive({ error: "PUBLIC_FDE_DAILY_BUDGET_USD must be a positive amount in dollars." })),
+  PUBLIC_FDE_RESERVE_PER_REPORT_USD: optional(z.coerce.number().positive({ error: "PUBLIC_FDE_RESERVE_PER_REPORT_USD must be a positive amount in dollars." })),
+  PUBLIC_FDE_INPUT_USD_PER_MTOK: optional(z.coerce.number().nonnegative({ error: "PUBLIC_FDE_INPUT_USD_PER_MTOK must be an amount in dollars." })),
+  PUBLIC_FDE_OUTPUT_USD_PER_MTOK: optional(z.coerce.number().nonnegative({ error: "PUBLIC_FDE_OUTPUT_USD_PER_MTOK must be an amount in dollars." })),
+  PUBLIC_FDE_ADMIN_EMAILS: optional(z.string().trim()),
+  PUBLIC_FDE_RETENTION_HOURS: optional(z.coerce.number().positive({ error: "PUBLIC_FDE_RETENTION_HOURS must be a positive number of hours." })),
+  PUBLIC_FDE_GUEST_DAILY_REPORTS: optional(z.coerce.number().int().positive({ error: "PUBLIC_FDE_GUEST_DAILY_REPORTS must be a whole number." })),
+  PUBLIC_FDE_MAX_OPEN_REPORTS: optional(z.coerce.number().int().positive({ error: "PUBLIC_FDE_MAX_OPEN_REPORTS must be a whole number." })),
+  PUBLIC_FDE_IP_HOURLY: optional(z.coerce.number().int().positive({ error: "PUBLIC_FDE_IP_HOURLY must be a whole number." })),
+  // Whether this process claims queued public reviews. Off on a replica that should only serve pages.
+  PUBLIC_FDE_WORKER: optional(z.enum(["0", "1"], { error: "PUBLIC_FDE_WORKER must be 0 or 1." })),
+  // For the tests only: sends the public review's model requests to <url> instead of Anthropic.
+  PUBLIC_FDE_ANTHROPIC_TEST_BASE_URL: optional(
+    z.url({ protocol: /^https?$/, error: "PUBLIC_FDE_ANTHROPIC_TEST_BASE_URL must be an http:// or https:// URL." }),
+  ),
   // For the end-to-end tests only: sends every job source's requests to
   // <url>/<source> instead, where a fake source answers (e2e/fake-jobs.mts).
   DOSSIER_JOBS_TEST_BASE_URL: optional(

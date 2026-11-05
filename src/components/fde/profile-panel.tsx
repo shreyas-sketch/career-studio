@@ -28,7 +28,7 @@ const SECTION_NAMES: Record<string, string> = {
 const STATE_WORDS: Record<SectionState, string> = { present: "Retrieved", empty: "Empty on this profile", not_retrieved: "Not retrieved", restricted: "Restricted" };
 
 /** An image from the snapshot, or nothing at all: a blocked or expired one just leaves the fallback showing. */
-function SnapshotImage({ profile, imageKey, alt, className, fallback, eager = false }: { profile: Profile; imageKey: string | null; alt: string; className?: string; fallback: ReactNode; eager?: boolean }) {
+function SnapshotImage({ profile, imageKey, alt, className, fallback, eager = false, mediaBase }: { profile: Profile; imageKey: string | null; alt: string; className?: string; fallback: ReactNode; eager?: boolean; mediaBase: string }) {
   const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLImageElement>(null);
   // An image that failed before the page became interactive never reaches onError.
@@ -37,7 +37,7 @@ function SnapshotImage({ profile, imageKey, alt, className, fallback, eager = fa
   }, []);
   if (!imageKey || failed || !profile.imageKeys.includes(imageKey)) return <>{fallback}</>;
   // eslint-disable-next-line @next/next/no-img-element -- served by the checked same-origin proxy
-  return <img ref={ref} src={`/api/fde/media/${profile.snapshotId}/${encodeURIComponent(imageKey)}`} alt={alt} className={className} onError={() => setFailed(true)} loading={eager ? "eager" : "lazy"} />;
+  return <img ref={ref} src={`${mediaBase}/${encodeURIComponent(imageKey)}`} alt={alt} className={className} onError={() => setFailed(true)} loading={eager ? "eager" : "lazy"} />;
 }
 
 /** All of a long text, collapsed until asked for. Nothing is ever cut. */
@@ -83,7 +83,9 @@ const Entries = ({ entries }: { entries: NamedEntry[] }) => (
 
 const dates = (start: { text: string } | null, end: { text: string } | null, current: boolean) => [start?.text, current ? "Present" : end?.text].filter(Boolean).join(" to ");
 
-export function ProfilePanel({ profile, origin }: { profile: Profile; origin: ReportView["profileOrigin"] }) {
+/** `mediaBase` is where this page's images are served from; the account's own route unless given. */
+export function ProfilePanel({ profile, origin, mediaBase }: { profile: Profile; origin: ReportView["profileOrigin"]; mediaBase?: string }) {
+  const base = mediaBase ?? `/api/fde/media/${profile.snapshotId}`;
   const placeholder = (
     <span className="grid size-full place-items-center bg-track text-muted">
       <UserRound size={34} aria-hidden="true" />
@@ -93,11 +95,11 @@ export function ProfilePanel({ profile, origin }: { profile: Profile; origin: Re
   return (
     <article className="overflow-hidden rounded-panel border border-line-card bg-card">
       <div className="h-24 bg-track">
-        <SnapshotImage profile={profile} imageKey={profile.banner} alt="" className="size-full object-cover" fallback={null} eager />
+        <SnapshotImage mediaBase={base} profile={profile} imageKey={profile.banner} alt="" className="size-full object-cover" fallback={null} eager />
       </div>
       <div className="px-5 pb-3">
         <div className="-mt-10 size-20 overflow-hidden rounded-full border-[3px] border-card bg-track">
-          <SnapshotImage profile={profile} imageKey={profile.photo} alt={`${profile.name}'s profile picture`} className="size-full object-cover" fallback={placeholder} eager />
+          <SnapshotImage mediaBase={base} profile={profile} imageKey={profile.photo} alt={`${profile.name}'s profile picture`} className="size-full object-cover" fallback={placeholder} eager />
         </div>
         <h2 className="mt-2 font-serif text-2xl text-pretty">{profile.name || "Name not returned"}</h2>
         {profile.headline && <p className="text-sm text-pretty">{profile.headline}</p>}
@@ -124,7 +126,7 @@ export function ProfilePanel({ profile, origin }: { profile: Profile; origin: Re
             {profile.experience.map((job) => (
               <div key={job.id} className="flex gap-3">
                 <span className="size-9 shrink-0 overflow-hidden rounded-control bg-track">
-                  <SnapshotImage profile={profile} imageKey={job.logo} alt="" className="size-full object-contain" fallback={<span className="grid size-full place-items-center text-muted"><Building2 size={16} aria-hidden="true" /></span>} />
+                  <SnapshotImage mediaBase={base} profile={profile} imageKey={job.logo} alt="" className="size-full object-contain" fallback={<span className="grid size-full place-items-center text-muted"><Building2 size={16} aria-hidden="true" /></span>} />
                 </span>
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <p className="text-sm font-medium text-pretty">{job.title || "Title not returned"}</p>
@@ -142,7 +144,7 @@ export function ProfilePanel({ profile, origin }: { profile: Profile; origin: Re
             {profile.education.map((school) => (
               <div key={school.id} className="flex gap-3">
                 <span className="size-9 shrink-0 overflow-hidden rounded-control bg-track">
-                  <SnapshotImage profile={profile} imageKey={school.logo} alt="" className="size-full object-contain" fallback={<span className="grid size-full place-items-center text-muted"><GraduationCap size={16} aria-hidden="true" /></span>} />
+                  <SnapshotImage mediaBase={base} profile={profile} imageKey={school.logo} alt="" className="size-full object-contain" fallback={<span className="grid size-full place-items-center text-muted"><GraduationCap size={16} aria-hidden="true" /></span>} />
                 </span>
                 <div className="flex min-w-0 flex-col">
                   <p className="text-sm font-medium text-pretty">{school.school}</p>

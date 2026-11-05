@@ -4,7 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
 import { env } from "@/lib/env";
-import { schemaForUser } from "@/lib/tenancy/schema-name";
+import { PUBLIC_FDE_TENANT_ID, schemaForUser } from "@/lib/tenancy/schema-name";
 
 // One Prisma client per active user, each bound to that user's schema twice
 // over: Prisma qualifies its own queries with the schema, and every
@@ -14,6 +14,8 @@ import { schemaForUser } from "@/lib/tenancy/schema-name";
 
 const MAX_CLIENTS = 50;
 const POOL_SIZE = 3;
+/** The public review's service tenant serves every visitor's polling and every worker's writes. */
+const PUBLIC_POOL_SIZE = 12;
 
 type Entry = { client: PrismaClient; lastUsed: number };
 const globalForClients = globalThis as unknown as { tenantClients?: Map<string, Entry> };
@@ -26,10 +28,10 @@ export function connectionStringForSchema(base: string, schema: string): string 
   return url.toString();
 }
 
-export function createClientForSchema(schema: string, base = env.DATABASE_URL): PrismaClient {
+export function createClientForSchema(schema: string, base = env.DATABASE_URL, max = POOL_SIZE): PrismaClient {
   return new PrismaClient({
     adapter: new PrismaPg(
-      { connectionString: connectionStringForSchema(base, schema), max: POOL_SIZE, idleTimeoutMillis: 30_000 },
+      { connectionString: connectionStringForSchema(base, schema), max, idleTimeoutMillis: 30_000 },
       { schema },
     ),
   });
@@ -43,7 +45,7 @@ export function clientForUser(userId: string): PrismaClient {
     found.lastUsed = Date.now();
     return found.client;
   }
-  const client = createClientForSchema(schema);
+  const client = createClientForSchema(schema, env.DATABASE_URL, userId === PUBLIC_FDE_TENANT_ID ? PUBLIC_POOL_SIZE : POOL_SIZE);
   clients.set(schema, { client, lastUsed: Date.now() });
   evictIdle();
   return client;
@@ -51,7 +53,8 @@ export function clientForUser(userId: string): PrismaClient {
 
 function evictIdle() {
   if (clients.size <= MAX_CLIENTS) return;
-  const oldest = [...clients.entries()].sort((a, b) => a[1].lastUsed - b[1].lastUsed);
+  // The public review's client stays: closing it mid-burst would only open it again.
+  const oldest = [...clients.entries()].filter(([schema]) => schema !== schemaForUser(PUBLIC_FDE_TENANT_ID)).sort((a, b) => a[1].lastUsed - b[1].lastUsed);
   for (const [schema, entry] of oldest.slice(0, clients.size - MAX_CLIENTS)) {
     clients.delete(schema);
     // Queries already running finish first; $disconnect waits for them.

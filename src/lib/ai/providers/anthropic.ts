@@ -27,6 +27,9 @@ const effortLevels = new Map<string, ReadonlySet<Effort>>();
 // instead (#230).
 const promptSchemas = new Set<string>();
 
+/** What one request used, as the API reported it. */
+export type AnthropicUsage = { model: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
+
 /** Claude through the Messages API with the user's own key. */
 export class AnthropicProvider extends BaseProvider {
   readonly kind = "ANTHROPIC" as const;
@@ -37,6 +40,8 @@ export class AnthropicProvider extends BaseProvider {
     apiKey: string | null,
     model: string | null,
     timeoutMs: number,
+    /** Called with each answer's token counts, e.g. to account for spend. */
+    private readonly onUsage?: (usage: AnthropicUsage) => void | Promise<void>,
   ) {
     super(model, timeoutMs);
     // The SDK sends the key as a bearer token since 1.0. The Claude API takes
@@ -81,6 +86,15 @@ export class AnthropicProvider extends BaseProvider {
       },
       { signal: call.signal },
     );
+    if (this.onUsage && message.usage) {
+      await this.onUsage({
+        model: call.model,
+        inputTokens: message.usage.input_tokens ?? 0,
+        outputTokens: message.usage.output_tokens ?? 0,
+        cacheReadTokens: message.usage.cache_read_input_tokens ?? 0,
+        cacheWriteTokens: message.usage.cache_creation_input_tokens ?? 0,
+      });
+    }
     if (message.stop_reason === "refusal") {
       throw new AiError("provider", "The model declined to answer this one. Try rewording it, or try again.", "refusal");
     }

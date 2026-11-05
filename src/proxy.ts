@@ -8,6 +8,13 @@ import { PRINT_TOKEN_HEADER, verifyPrintToken } from "@/lib/pdf/print-token";
 /** Pages anyone may open: signing in and creating an account. */
 const PUBLIC_PATHS = new Set(["/login", "/signup"]);
 
+/**
+ * The public FDE Review (docs/PUBLIC_FDE_REVIEW.md): its page, a visitor's own
+ * report page, and its own API. Only these. They identify visitors by a guest
+ * cookie and check ownership themselves; nothing else in the app opens up.
+ */
+const PUBLIC_FDE_PATHS = /^\/(?:fde-review(?:\/|$)|api\/public\/fde(?:\/|$))/;
+
 /** The Claude connector's endpoint, its sign-in and the metadata that points to them. */
 const CONNECTOR_PATHS = /^\/(?:api\/(?:mcp|oauth)(?:\/|$)|\.well-known\/oauth-(?:authorization-server|protected-resource)(?:\/|$))/;
 
@@ -21,6 +28,7 @@ const CONNECTOR_PATHS = /^\/(?:api\/(?:mcp|oauth)(?:\/|$)|\.well-known\/oauth-(?
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   if (PUBLIC_PATHS.has(pathname)) return pass(request);
+  if (PUBLIC_FDE_PATHS.test(pathname)) return pass(request);
   // The Claude connector (#221) brings its own credentials, an OAuth token,
   // which its routes check; they answer 404 while it's off.
   if (CONNECTOR_PATHS.test(pathname)) return NextResponse.next();

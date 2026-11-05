@@ -16,3 +16,11 @@ export function schemaForUser(userId: string): string {
 
 /** The schema shared by all users: accounts, sessions and sign-in throttling. */
 export const ACCOUNTS_SCHEMA = "cs_accounts";
+
+/**
+ * The service tenant that holds the public FDE Review's guest reports
+ * (src/lib/public-fde). It's a schema like any account's, so the review's code
+ * runs there unchanged, but no account has this id: nobody signs in as it,
+ * and per-account work (sweeps, backups, the agent) never runs in it.
+ */
+export const PUBLIC_FDE_TENANT_ID = "f0de00000000000000000001";

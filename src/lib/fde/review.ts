@@ -6,6 +6,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { getAiProvider, type AIProvider } from "@/lib/ai";
 import { isAiUsable } from "@/lib/ai/config";
 import { loadTaskOptions } from "@/lib/ai/task-options";
+import type { TaskOptions } from "@/lib/ai/tasks";
 import { assessEvidence, eligibilityAssessment } from "@/lib/ai/tasks/fde/evidence";
 import { writeInsights } from "@/lib/ai/tasks/fde/insights";
 import { extractRequirements } from "@/lib/ai/tasks/fde/requirements";
@@ -138,7 +139,21 @@ export function planFits(plan: LearningPlan["plan"], hoursPerWeek: number, weeks
   return steps.every((step) => step.hours <= hoursPerWeek) && steps.reduce((sum, step) => sum + step.hours, 0) <= hoursPerWeek * weeks;
 }
 
-export type ReviewOptions = { freshProfile: boolean; freshMarket: boolean; meter?: SpendMeter; withFreelance: boolean };
+/** A model chosen by the caller instead of the account's AI settings, e.g. the public review's server-side model. */
+export type ReviewAi = { provider: AIProvider; taskOptions: Omit<TaskOptions, "signal"> };
+
+export type ReviewOptions = {
+  freshProfile: boolean;
+  freshMarket: boolean;
+  meter?: SpendMeter;
+  withFreelance: boolean;
+  /** Use this model rather than the account's. */
+  ai?: ReviewAi;
+  /** Only reuse a saved benchmark; never search the market from inside this review. */
+  requireCachedBenchmark?: boolean;
+  /** Errors that must stop the whole review rather than be noted against one role (an outage, a bad key). */
+  isFatal?: (error: unknown) => boolean;
+};
 
 export async function runReview(id: string, { step, signal }: Pick<JobContext, "step" | "signal">, options: ReviewOptions): Promise<ReportState> {
   const report = await prisma.fdeReport.findUniqueOrThrow({ where: { id } });
@@ -168,13 +183,15 @@ export async function runReview(id: string, { step, signal }: Pick<JobContext, "
     const cutoff = new Date(Date.now() - fdeConfig().profileMaxAgeDays * 86_400_000);
     const reusable =
       existing ??
-      (options.freshProfile ? null : await prisma.fdeProfileSnapshot.findFirst({ where: { subjectKey: report.subjectKey, provider: provider.label, retrievedAt: { gte: cutoff } }, orderBy: { retrievedAt: "desc" } }));
+      // Only this owner's own reads: one visitor's request never stands in for another's.
+      (options.freshProfile ? null : await prisma.fdeProfileSnapshot.findFirst({ where: { subjectKey: report.subjectKey, ownerUserId: report.ownerUserId, provider: provider.label, retrievedAt: { gte: cutoff } }, orderBy: { retrievedAt: "desc" } }));
     let snapshotId: string;
     let origin: ProfileOrigin;
     if (reusable) {
       profile = normalizedProfileSchema.parse(reusable.data);
       snapshotId = reusable.id;
-      origin = "cached";
+      // Read earlier for this very report (the public review reads profiles first): it's a first read, not a reuse.
+      origin = existing && report.profileOrigin && report.profileOrigin !== "cached" ? (report.profileOrigin as ProfileOrigin) : "cached";
     } else {
       await meter.authorize(ESTIMATES_MICRO.profile);
       const read = await provider.readProfile(report.subjectProfileUrl, { fresh: options.freshProfile, signal });
@@ -219,6 +236,9 @@ export async function runReview(id: string, { step, signal }: Pick<JobContext, "
       : options.freshMarket
         ? null
         : await prisma.fdeBenchmark.findFirst({ where: { scopeKey: report.scopeKey, rubricVersion: RUBRIC_VERSION, expiresAt: { gt: new Date() } }, orderBy: { version: "desc" } });
+    if (!reusable && options.requireCachedBenchmark) {
+      throw new DiscoveryFailed("The shared market sample isn't ready, so no roles were searched from this review. Try again shortly.", []);
+    }
     if (reusable) {
       roles = reusable.roles as unknown as Role[];
       coverage = reusable.coverage as unknown as Coverage;
@@ -279,11 +299,12 @@ export async function runReview(id: string, { step, signal }: Pick<JobContext, "
   if (roles.length === 0) {
     return finish("partial", "no_roles", "No verified open role matched this search, so there's nothing to compare with. No older sample was used in its place. Widen the filters or try again later.");
   }
-  if (!(await isAiUsable())) {
+  if (!options.ai && !(await isAiUsable())) {
     return finish("partial", "ai_not_configured", "No AI model is connected, so the roles were found but can't be compared yet. Connect one in Settings and try again.");
   }
 
-  const [rawAi, taskOptions] = await Promise.all([getAiProvider(), loadTaskOptions()]);
+  const [rawAi, taskOptions] = options.ai ? [options.ai.provider, options.ai.taskOptions] : await Promise.all([getAiProvider(), loadTaskOptions()]);
+  const fatal = (error: unknown) => options.isFatal?.(error) ?? false;
   const ai = meteredAi(rawAi, meter);
   const aiOptions = { ...taskOptions, signal };
 
@@ -302,6 +323,7 @@ export async function runReview(id: string, { step, signal }: Pick<JobContext, "
         if (!data.isCustomerFacingEngineering) notFde.push({ role, note: "Read in full, the posting doesn't describe hands-on engineering with customers." });
         else if (data.requirements.length === 0) role.extractionError = "No requirement could be read from this posting.";
       } catch (error) {
+        if (fatal(error)) throw error;
         logServerError("FDE requirements", error);
         role.extractionError = "This posting couldn't be read.";
       }
@@ -345,6 +367,7 @@ export async function runReview(id: string, { step, signal }: Pick<JobContext, "
       found = data.assessments;
       result.checks.claimsDowngraded += data.downgraded;
     } catch (error) {
+      if (fatal(error)) throw error;
       logServerError("FDE evidence", error);
       result.checks.failedRoles.push(role.id);
       found = technical.map((requirement) => ({ requirementId: requirement.id, roleId: role.id, status: "cannot_assess", evidence: [], note: "The comparison for this role failed, so this wasn't assessed.", action: "" }));
@@ -385,6 +408,7 @@ export async function runReview(id: string, { step, signal }: Pick<JobContext, "
     );
     result.insights = { ...data, writtenWith: `${data.writtenWith}, ${promptVersion}` };
   } catch (error) {
+    if (fatal(error)) throw error;
     logServerError("FDE insights", error);
     result.checks.insightsFailed = true;
   }
@@ -420,6 +444,7 @@ export async function runReview(id: string, { step, signal }: Pick<JobContext, "
       result.checks.planFailed = true;
     }
   } catch (error) {
+    if (fatal(error)) throw error;
     logServerError("FDE plan", error);
     result.checks.planFailed = true;
   }
@@ -476,72 +501,76 @@ const SCORE_LIMIT = 5;
 const emptyFreelance = (): FreelanceResult => ({ state: "running", keywords: [], preferences: "Unknown: this person's rate, hours and availability aren't known here.", matches: [], sources: [], error: null });
 
 /** "Stop": real listings for the person under review, from what their own profile shows. */
+export async function runFreelance(id: string, { step, signal }: Pick<JobContext, "step" | "signal">, ai?: ReviewAi): Promise<number> {
+  const save = (result: FreelanceResult) => prisma.fdeReport.update({ where: { id }, data: { freelance: result as unknown as Prisma.InputJsonValue } });
+  const result = emptyFreelance();
+  await save(result);
+  try {
+    const report = await prisma.fdeReport.findUniqueOrThrow({ where: { id }, select: { snapshotId: true } });
+    const snapshot = report.snapshotId ? await prisma.fdeProfileSnapshot.findUnique({ where: { id: report.snapshotId } }) : null;
+    if (!snapshot) throw new Error("No profile to match against");
+    const subject = toProfileData(normalizedProfileSchema.parse(snapshot.data));
+    // Neutral preferences: never the account owner's rate, hours or location.
+    const prefs = freelancePrefsSchema.parse({});
+    // "Engineer at Acme" searches for the job, not for listings that mention Acme.
+    result.keywords = [...new Set(searchKeywords(prefs, subject).map((word) => word.replace(/\s+(?:at|@)\s+.*$/i, "").trim()))].filter(Boolean);
+    await step("Checking freelance sources");
+    const found = await searchFreelanceSources(result.keywords, signal);
+    result.sources = found.map((source) => ({ source: FREELANCE_SOURCES[source.source].name, found: source.items.length, error: source.error, stale: source.stale, fetchedAt: source.fetchedAt?.toISOString() ?? null }));
+    const fetchedAt = new Map(found.map((source) => [source.source, source.fetchedAt?.toISOString() ?? null]));
+    const matches = relevant(found.flatMap((source) => source.items), prefs, result.keywords)
+      .filter(({ item }) => !UNPAID.test(`${item.title} ${item.description}`))
+      .filter(({ item }) => isFreelanceWork(item.kind, parsePay(item.budget)))
+      .filter(({ relevance }) => relevance.tier !== "low")
+      .slice(0, MATCH_LIMIT);
+    result.matches = matches.map(({ item, relevance }) => ({
+      id: `${item.source}:${item.externalId}`,
+      source: FREELANCE_SOURCES[item.source].name,
+      title: item.title,
+      client: item.client,
+      url: item.url,
+      kind: item.kind,
+      location: item.location,
+      pay: parsePay(item.budget),
+      postedAt: item.postedAt,
+      fetchedAt: fetchedAt.get(item.source) ?? null,
+      status: "Listed when last fetched",
+      relevance: relevance.tier,
+      relevanceWhy: relevance.why,
+      fit: null,
+    }));
+    await save(result);
+    if (result.matches.length > 0 && (ai || (await isAiUsable()))) {
+      await step("Checking the best matches' fit");
+      const [provider, options] = ai ? [ai.provider, ai.taskOptions] : await Promise.all([getAiProvider(), loadTaskOptions()]);
+      for (const [index, { item }] of matches.slice(0, SCORE_LIMIT).entries()) {
+        try {
+          const { data } = await scoreOpportunity(provider, { opportunity: { ...item, source: FREELANCE_SOURCES[item.source].name }, profile: subject, preferences: "" }, { ...options, signal });
+          const fit = withoutUnbackedClaims(data, subject, { minimumHourlyUsd: null, hoursPerWeek: null });
+          result.matches[index].fit = { score: fit.score, verdict: fit.verdict, reasons: fit.reasons, concerns: fit.concerns };
+          await save(result);
+        } catch (error) {
+          logServerError("FDE freelance fit", error);
+        }
+      }
+    }
+    result.state = "done";
+    await save(result);
+    return result.matches.length;
+  } catch (error) {
+    result.state = "failed";
+    result.error = "The freelance sources couldn't be checked. Nothing is shown in place of real listings.";
+    await save(result);
+    throw error;
+  }
+}
+
 export const fdeFreelanceJob = defineJob({
   type: "fde-freelance",
   input: z.object({ id: z.string() }),
   result: z.object({ id: z.string(), matches: z.number() }),
-  async run({ id }, { step, signal }) {
-    const save = (result: FreelanceResult) => prisma.fdeReport.update({ where: { id }, data: { freelance: result as unknown as Prisma.InputJsonValue } });
-    const result = emptyFreelance();
-    await save(result);
-    try {
-      const report = await prisma.fdeReport.findUniqueOrThrow({ where: { id }, select: { snapshotId: true } });
-      const snapshot = report.snapshotId ? await prisma.fdeProfileSnapshot.findUnique({ where: { id: report.snapshotId } }) : null;
-      if (!snapshot) throw new Error("No profile to match against");
-      const subject = toProfileData(normalizedProfileSchema.parse(snapshot.data));
-      // Neutral preferences: never the account owner's rate, hours or location.
-      const prefs = freelancePrefsSchema.parse({});
-      // "Engineer at Acme" searches for the job, not for listings that mention Acme.
-      result.keywords = [...new Set(searchKeywords(prefs, subject).map((word) => word.replace(/\s+(?:at|@)\s+.*$/i, "").trim()))].filter(Boolean);
-      await step("Checking freelance sources");
-      const found = await searchFreelanceSources(result.keywords, signal);
-      result.sources = found.map((source) => ({ source: FREELANCE_SOURCES[source.source].name, found: source.items.length, error: source.error, stale: source.stale, fetchedAt: source.fetchedAt?.toISOString() ?? null }));
-      const fetchedAt = new Map(found.map((source) => [source.source, source.fetchedAt?.toISOString() ?? null]));
-      const matches = relevant(found.flatMap((source) => source.items), prefs, result.keywords)
-        .filter(({ item }) => !UNPAID.test(`${item.title} ${item.description}`))
-        .filter(({ item }) => isFreelanceWork(item.kind, parsePay(item.budget)))
-        .filter(({ relevance }) => relevance.tier !== "low")
-        .slice(0, MATCH_LIMIT);
-      result.matches = matches.map(({ item, relevance }) => ({
-        id: `${item.source}:${item.externalId}`,
-        source: FREELANCE_SOURCES[item.source].name,
-        title: item.title,
-        client: item.client,
-        url: item.url,
-        kind: item.kind,
-        location: item.location,
-        pay: parsePay(item.budget),
-        postedAt: item.postedAt,
-        fetchedAt: fetchedAt.get(item.source) ?? null,
-        status: "Listed when last fetched",
-        relevance: relevance.tier,
-        relevanceWhy: relevance.why,
-        fit: null,
-      }));
-      await save(result);
-      if (result.matches.length > 0 && (await isAiUsable())) {
-        await step("Checking the best matches' fit");
-        const [provider, options] = await Promise.all([getAiProvider(), loadTaskOptions()]);
-        for (const [index, { item }] of matches.slice(0, SCORE_LIMIT).entries()) {
-          try {
-            const { data } = await scoreOpportunity(provider, { opportunity: { ...item, source: FREELANCE_SOURCES[item.source].name }, profile: subject, preferences: "" }, { ...options, signal });
-            const fit = withoutUnbackedClaims(data, subject, { minimumHourlyUsd: null, hoursPerWeek: null });
-            result.matches[index].fit = { score: fit.score, verdict: fit.verdict, reasons: fit.reasons, concerns: fit.concerns };
-            await save(result);
-          } catch (error) {
-            logServerError("FDE freelance fit", error);
-          }
-        }
-      }
-      result.state = "done";
-      await save(result);
-      return { id, matches: result.matches.length };
-    } catch (error) {
-      result.state = "failed";
-      result.error = "The freelance sources couldn't be checked. Nothing is shown in place of real listings.";
-      await save(result);
-      throw error;
-    }
+  async run({ id }, context) {
+    return { id, matches: await runFreelance(id, context) };
   },
 });
 
@@ -609,4 +638,107 @@ export const fdePilotJob = defineJob({
 /** The same filters always make the same key, in any order. */
 export function scopeKeyOf(filters: FdeFilters): string {
   return JSON.stringify([RUBRIC_VERSION, filters.location.toLowerCase(), filters.remoteOnly, filters.seniority]);
+}
+
+// ─── Used by the public review (src/lib/public-fde) ───────────────
+
+/**
+ * Reads the profile for a report that has none yet, into a snapshot of its
+ * own owner's. Errors are left to the caller, which knows whether they mean
+ * "this profile can't be read" or "the provider is unavailable for everyone".
+ */
+export async function readProfileForReport(id: string, { meter, signal }: { meter: SpendMeter; signal: AbortSignal }): Promise<NormalizedProfile> {
+  const report = await prisma.fdeReport.findUniqueOrThrow({ where: { id } });
+  if (report.snapshotId) {
+    const existing = await prisma.fdeProfileSnapshot.findUnique({ where: { id: report.snapshotId } });
+    if (existing) return normalizedProfileSchema.parse(existing.data);
+  }
+  const provider = retrievalProvider();
+  const stages = (report.stages as unknown as ReportStage[] | null) ?? initialStages();
+  const stage = stages.find((entry) => entry.key === "reading_profile");
+  if (stage) {
+    stage.state = "running";
+    stage.detail = "Reading the public profile";
+    stage.startedAt = new Date().toISOString();
+  }
+  await prisma.fdeReport.update({ where: { id }, data: { stages: stages as unknown as Prisma.InputJsonValue } });
+  await meter.authorize(ESTIMATES_MICRO.profile);
+  const read = await provider.readProfile(report.subjectProfileUrl, { fresh: false, signal });
+  await meter.record("profile", read.charge);
+  const profile = read.profile;
+  const snapshot = await prisma.fdeProfileSnapshot.create({
+    data: {
+      ownerUserId: report.ownerUserId,
+      subjectProfileId: profile.providerProfileId,
+      subjectProfileUrl: report.subjectProfileUrl,
+      subjectKey: report.subjectKey,
+      provider: provider.label,
+      data: profile as unknown as Prisma.InputJsonValue,
+      quality: profile.quality,
+      costMicro: read.charge.costMicro,
+    },
+  });
+  if (stage) {
+    stage.state = profile.quality === "full" ? "done" : "partial";
+    stage.detail = `Read from ${provider.label}.`;
+    stage.finishedAt = new Date().toISOString();
+  }
+  await prisma.fdeReport.update({
+    where: { id },
+    data: { snapshotId: snapshot.id, profileOrigin: "first_fetch", subjectName: profile.name, subjectProfileId: profile.providerProfileId, stages: stages as unknown as Prisma.InputJsonValue },
+  });
+  return profile;
+}
+
+export type BenchmarkProgress = (detail: string) => Promise<void>;
+
+/**
+ * Builds and saves a benchmark for `filters` unless a fresh one exists, the
+ * same way a review does (discovery, verification, requirements). The caller
+ * holds the lock that makes this happen once for everyone waiting on it.
+ */
+export async function ensureBenchmark(
+  filters: FdeFilters,
+  { meter, ai, signal, onProgress, isFatal }: { meter: SpendMeter; ai: ReviewAi; signal: AbortSignal; onProgress?: BenchmarkProgress; isFatal?: (error: unknown) => boolean },
+): Promise<{ id: string; reused: boolean; roles: number }> {
+  const scopeKey = scopeKeyOf(filters);
+  const fresh = await prisma.fdeBenchmark.findFirst({ where: { scopeKey, rubricVersion: RUBRIC_VERSION, expiresAt: { gt: new Date() } }, orderBy: { version: "desc" } });
+  if (fresh) return { id: fresh.id, reused: true, roles: (fresh.roles as unknown as Role[]).length };
+  const progress = onProgress ?? (async () => {});
+  await progress("Searching employers' boards and job listings");
+  const found = await discoverMarket(filters, {
+    provider: retrievalProvider(),
+    meter,
+    fresh: false,
+    skipPaid: null,
+    signal,
+    onFound: async (candidates, checked, total) => progress(`Checked ${checked} of ${total} employers' boards; ${candidates.length} possible roles so far.`),
+  });
+  let roles = found.roles;
+  const coverage = found.coverage;
+  if (roles.length === 0) throw new DiscoveryFailed("No verified open role was found in the market right now.", coverage.sources);
+  await progress(`Reading what ${roles.length} postings ask for`);
+  const aiOptions = { ...ai.taskOptions, signal };
+  const notFde: Role[] = [];
+  let done = 0;
+  await inPool(roles, MODEL_CONCURRENCY, async (role) => {
+    try {
+      const { data } = await extractRequirements(ai.provider, { roleId: role.id, title: role.title, employer: role.employer, description: role.description }, aiOptions);
+      role.requirements = data.requirements;
+      if (!data.isCustomerFacingEngineering) {
+        notFde.push(role);
+        coverage.excluded.unshift({ title: role.title, employer: role.employer, reason: "Read in full, the posting doesn't describe hands-on engineering with customers.", url: role.url });
+      } else if (data.requirements.length === 0) role.extractionError = "No requirement could be read from this posting.";
+    } catch (error) {
+      if (isFatal?.(error)) throw error;
+      logServerError("FDE requirements", error);
+      role.extractionError = "This posting couldn't be read.";
+    }
+    done++;
+    await progress(`Read ${done} of ${roles.length} postings`);
+  });
+  roles = roles.filter((role) => !notFde.includes(role));
+  if (!roles.some((role) => !role.extractionError)) throw new DiscoveryFailed("None of the postings could be read, so no market sample was saved.", coverage.sources);
+  const id = await saveBenchmark(scopeKey, filters, roles, coverage);
+  return { id, reused: false, roles: roles.length };
 }

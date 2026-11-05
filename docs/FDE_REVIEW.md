@@ -52,6 +52,27 @@ old benchmark or a pasted job never takes its place.
   probability or a universal employability rating, and missing evidence isn't
   proof of missing ability. Ticking off a learning step never changes a score.
 
+## Career and earning potential (`src/lib/fde/potential.ts`)
+
+Worked out from the report's saved postings and assessments, with no model and no
+paid call, so older reports show it too.
+
+- **Next roles** are the sampled roles by the rubric's reach, each with the skills
+  this profile doesn't show yet and the stated conditions it doesn't assume are met.
+- **Advertised pay** reads only the ranges a posting states, as yearly figures. Groups
+  are country, currency and level, and nothing is converted.
+- **Base and total stay apart.** A range that says both, or neither, is labelled "Pay
+  type not clear" and is never counted as either.
+- **An average is the mean of range midpoints** and takes at least 3 postings. Below
+  that, the group shows the stated range as insufficient data. A posting counts once
+  in a country, however many zones it lists. One that lists a range per level, or `$`
+  outside the US with no currency named, isn't counted.
+- **Current pay is optional** and is compared only with the same currency and pay type.
+  It stays on the page: it isn't saved, exported or sent to the server or a model.
+  Without it, no increase is shown.
+
+Nothing here predicts an offer, and completing the plan doesn't guarantee a job or pay.
+
 ## Setting it up
 
 The only new credential is `TREG_API_TOKEN`. One token covers the profile and job

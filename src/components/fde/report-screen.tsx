@@ -16,6 +16,7 @@ import { STAGE_LABELS, type ReportResult, type ReportStage, type ReportView, typ
 
 import { MatrixKey, Readiness, RequirementMatrix } from "./comparison";
 import { FreelanceMatches, LearningPlanView, StrengthsAndGaps, Suggestions } from "./improve";
+import { CareerPotential } from "./potential";
 import { ProfilePanel } from "./profile-panel";
 import { FoundRoleCard, InspectorBody, RoleCard, RoleDetail } from "./roles";
 import { day, money, requirementsById, Sheet, SourceLink, STATE_LABELS, tenure, when, type Inspect } from "./shared";
@@ -336,6 +337,14 @@ export function ReportScreen({ initial }: { initial: ReportView }) {
                   Checked against the sources: {report.result.checks.requirementsDropped} {report.result.checks.requirementsDropped === 1 ? "requirement" : "requirements"} and {report.result.checks.claimsDowngraded} {report.result.checks.claimsDowngraded === 1 ? "claim" : "claims"} dropped because the quote wasn&apos;t in the document.
                 </p>
               )}
+            </Section>
+          </div>
+        )}
+
+        {roles.length > 0 && report.state !== "running" && (
+          <div id="potential" className="scroll-mt-28 max-sm:scroll-mt-44">
+            <Section title="Your FDE career and earning potential" description="For the person in this report, from the openings sampled above and what the profile shows.">
+              <CareerPotential result={report.result} roles={roles} />
             </Section>
           </div>
         )}

@@ -54,11 +54,15 @@ Replace `APP` with the address you're testing:
     placeholder where a figure is unknown. Press a copy button and paste it somewhere.
     Learning plan hours should be at most 40 for 5 hours a week over 8 weeks, with no
     step over 5 hours.
-12. **Paid work**: open two listings. The amount, currency and basis should match the
+12. **Your FDE career and earning potential**: check that next roles name real gaps and
+    the pay groups say how many postings they use. Open **Sources** and compare one
+    figure with the posting. Enter a current figure and confirm an increase appears only
+    for the same currency and pay type, then reload and confirm the figure is gone.
+13. **Paid work**: open two listings. The amount, currency and basis should match the
     listing, or the card says "Pay not stated". Fees and Connects stay unknown. Nothing
     should mention your own rate or location.
-13. Open `APP/profile`. Your own profile must be unchanged.
-14. Note the spend on `APP/settings?section=fde`, then compare it with the Treg balance.
+14. Open `APP/profile`. Your own profile must be unchanged.
+15. Note the spend on `APP/settings?section=fde`, then compare it with the Treg balance.
 
 ## On a phone
 
@@ -119,6 +123,15 @@ Comparison
 [ ] Unsupported claims are downgraded                       Automated; real model NOT TESTED
 [ ] Score arithmetic and market aggregation                 Automated
 [ ] Seniority groups kept apart                             Fixture
+
+Career and earning potential
+[ ] Next roles name this profile's gaps                     Fixture
+[ ] Pay parsed from real postings' wording                  Automated; real postings read
+[ ] Base, total and unclear pay kept apart                  Automated
+[ ] Average needs 3 postings, otherwise insufficient data   Automated
+[ ] No increase shown without a current figure              Automated
+[ ] Same currency and pay type only                         Automated, fixture
+[ ] Current pay isn't saved                                 Code reviewed; reload it to check
 
 Freshness
 [ ] Saved benchmark reuse is disclosed                      Fixture

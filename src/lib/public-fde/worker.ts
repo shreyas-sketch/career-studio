@@ -1,6 +1,8 @@
 import "server-only";
 
 import { hostname } from "node:os";
+
+import type { PoolClient } from "pg";
 import { randomBytes } from "node:crypto";
 
 import type { Prisma } from "@/generated/prisma/client";
@@ -171,21 +173,8 @@ export async function ensureSharedBenchmark(jobId: string | null, signal: AbortS
   const ready = () => asPublicTenant(() => prisma.fdeBenchmark.findFirst({ where: { scopeKey: scopeKeyOf(PUBLIC_FILTERS), rubricVersion: RUBRIC_VERSION, expiresAt: { gt: new Date() } }, select: { id: true } }));
   if (await ready()) return;
   if (jobId) await noteStage(jobId, "discovering_roles", "running", "Preparing the shared market sample that every report in this session uses");
-  // Waiters don't hold a connection while they wait: only the builder keeps one, for its lock.
-  let holder: Awaited<ReturnType<ReturnType<typeof queuePool>["connect"]>> | null = null;
-  while (!holder) {
-    if (signal.aborted) throw signal.reason;
-    const client = await queuePool().connect();
-    const { rows } = await client.query<{ got: boolean }>(`SELECT pg_try_advisory_lock(hashtext('public-fde-benchmark')) AS got`).catch(() => ({ rows: [] as { got: boolean }[] }));
-    if (rows[0]?.got) {
-      holder = client;
-      break;
-    }
-    client.release();
-    await new Promise((resolve) => setTimeout(resolve, 2_000));
-    // Built by whoever held the lock while this one waited.
-    if (await ready()) return;
-  }
+  const holder = await acquireBenchmarkLock(signal, ready);
+  if (!holder) return;
   try {
     if (await ready()) return;
     const marketLedger = new JobLedger(null, MARKET_CAP_MICRO);
@@ -204,6 +193,28 @@ export async function ensureSharedBenchmark(jobId: string | null, signal: AbortS
   } finally {
     await holder.query(`SELECT pg_advisory_unlock(hashtext('public-fde-benchmark'))`).catch(() => {});
     holder.release();
+  }
+}
+
+/**
+ * The builder's lock, on a connection it keeps until it's done. Waiters don't
+ * hold a connection while they wait, and give up waiting (null) as soon as the
+ * sample they're waiting for exists.
+ */
+async function acquireBenchmarkLock(signal: AbortSignal, ready: () => Promise<unknown>): Promise<PoolClient | null> {
+  for (;;) {
+    if (signal.aborted) throw signal.reason;
+    const client = await queuePool().connect();
+    let got = false;
+    try {
+      const { rows } = await client.query<{ got: boolean }>(`SELECT pg_try_advisory_lock(hashtext('public-fde-benchmark')) AS got`);
+      got = rows[0]?.got === true;
+    } finally {
+      if (!got) client.release();
+    }
+    if (got) return client;
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+    if (await ready()) return null;
   }
 }
 

@@ -156,6 +156,15 @@ jobs:
       - run: yarn build
       - run: yarn test:e2e
 
+      # The public FDE review's screens (e2e/public-fde.spec.ts), for review.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: public-fde-screenshots
+          path: e2e-screenshots/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

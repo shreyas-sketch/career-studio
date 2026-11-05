@@ -1,10 +1,11 @@
 import "server-only";
 
+import { scopeKeyOf } from "@/lib/fde/review";
 import { RUBRIC_EXPLAINED, RUBRIC_VERSION } from "@/lib/fde/rubric";
 import { emptyResult, filtersSchema, normalizedProfileSchema, type Coverage, type FreelanceResult, type ProfileOrigin, type ReportResult, type ReportStage, type ReportView, type Role } from "@/lib/fde/types";
 import { prisma } from "@/lib/prisma";
 
-import { publicFdeConfig } from "./config";
+import { PUBLIC_FILTERS, publicFdeConfig } from "./config";
 import { ownerOf } from "./guest";
 import { modelConfigured } from "./model";
 import { readControls } from "./ops";
@@ -63,7 +64,7 @@ function scrub<T>(value: T): T {
 function publicCoverage(coverage: Coverage): Coverage {
   return {
     ...coverage,
-    sources: coverage.sources.map((source) => ({ ...source, note: source.status === "ok" ? source.note : SECRETISH.test(source.note) ? "Couldn't be read this time." : source.note })),
+    sources: (coverage.sources ?? []).map((source) => ({ ...source, note: source.status === "ok" ? source.note : SECRETISH.test(source.note) ? "Couldn't be read this time." : source.note })),
   };
 }
 
@@ -136,6 +137,10 @@ export async function loadPublicReport(id: string, guestId: string): Promise<Pub
           })()
         : null;
     const status = await statusOf(job, row.state, row.errorCode);
+    // While a report waits for its comparison, it already shows the shared sample: public job postings, the same for everyone.
+    const benchmarkRow =
+      row.benchmark ??
+      (status.final ? null : await prisma.fdeBenchmark.findFirst({ where: { scopeKey: scopeKeyOf(PUBLIC_FILTERS), rubricVersion: RUBRIC_VERSION, expiresAt: { gt: new Date() } }, orderBy: { version: "desc" } }));
     const stages = (row.stages as unknown as ReportStage[]).map((stage) => ({ ...stage, detail: safeDetail(stage) }));
     const view: PublicReportView = {
       id: row.id,
@@ -147,14 +152,14 @@ export async function loadPublicReport(id: string, guestId: string): Promise<Pub
       profileOrigin: row.profileOrigin as ProfileOrigin | null,
       benchmarkOrigin: row.benchmarkOrigin,
       profile,
-      benchmark: row.benchmark
+      benchmark: benchmarkRow
         ? {
-            id: row.benchmark.id,
-            version: row.benchmark.version,
-            discoveredAt: row.benchmark.discoveredAt.toISOString(),
-            expiresAt: row.benchmark.expiresAt.toISOString(),
-            coverage: publicCoverage(row.benchmark.coverage as unknown as Coverage),
-            roles: row.benchmark.roles as unknown as Role[],
+            id: benchmarkRow.id,
+            version: benchmarkRow.version,
+            discoveredAt: benchmarkRow.discoveredAt.toISOString(),
+            expiresAt: benchmarkRow.expiresAt.toISOString(),
+            coverage: publicCoverage(benchmarkRow.coverage as unknown as Coverage),
+            roles: benchmarkRow.roles as unknown as Role[],
           }
         : null,
       result: (row.result as unknown as ReportResult | null) ?? emptyResult(),

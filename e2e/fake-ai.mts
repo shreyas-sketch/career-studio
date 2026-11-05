@@ -354,6 +354,42 @@ const answers: Record<string, (messages: Message[]) => unknown> = {
   },
 };
 
+/** Which task an Anthropic request is, from its structured-output schema's top-level fields (it carries no schema name). */
+function taskOf(schema: { properties?: Record<string, unknown> } | undefined, system: string): string | null {
+  const keys = new Set(Object.keys(schema?.properties ?? {}));
+  const has = (key: string) => keys.has(key) || system.includes(`"${key}"`);
+  if (has("isCustomerFacingEngineering")) return "fde_requirements";
+  if (has("assessments")) return "fde_evidence";
+  if (has("rewrites")) return "fde_insights";
+  if (has("plan") && has("assessment")) return "skill_plan";
+  if (has("verdict") && has("concerns")) return "opportunity_fit";
+  return null;
+}
+
+type AnthropicBody = { model: string; system?: string; messages: Message[]; output_config?: { format?: { schema?: { properties?: Record<string, unknown> } } } };
+
+function anthropic(request: import("node:http").IncomingMessage, send: (status: number, body: unknown) => void) {
+  let raw = "";
+  request.on("data", (chunk) => (raw += chunk));
+  request.on("end", () => {
+    const body = JSON.parse(raw) as AnthropicBody;
+    const messages = [{ role: "system", content: body.system ?? "" }, ...body.messages];
+    last = messages;
+    const name = taskOf(body.output_config?.format?.schema, body.system ?? "");
+    const answer = name && answers[name];
+    if (!answer) return send(400, { type: "error", error: { type: "invalid_request_error", message: `No fake answer for this request.` } });
+    setTimeout(() => {
+      try {
+        const text = JSON.stringify(answer(messages));
+        const input = Math.ceil(raw.length / 4);
+        send(200, { id: "msg_fake", type: "message", role: "assistant", model: body.model, content: [{ type: "text", text }], stop_reason: "end_turn", stop_sequence: null, usage: { input_tokens: input, output_tokens: Math.ceil(text.length / 4) } });
+      } catch (error) {
+        send(500, { type: "error", error: { type: "api_error", message: String(error) } });
+      }
+    }, 300);
+  });
+}
+
 createServer((request, response) => {
   const send = (status: number, body: unknown) => {
     response.writeHead(status, { "content-type": "application/json" });
@@ -364,6 +400,11 @@ createServer((request, response) => {
   if (request.method === "GET" && request.url === "/v1/models") {
     return send(200, { object: "list", data: [{ id: "fake-model", object: "model", created: 0, owned_by: "e2e" }] });
   }
+  // The public FDE review speaks Anthropic's Messages API (src/lib/public-fde/model.ts).
+  if (request.method === "GET" && request.url?.startsWith("/v1/models/")) {
+    return send(200, { id: decodeURIComponent(request.url.slice("/v1/models/".length)), type: "model", display_name: "Fake model", capabilities: { effort: { supported: false } } });
+  }
+  if (request.method === "POST" && request.url === "/v1/messages") return anthropic(request, send);
   if (request.method !== "POST" || request.url !== "/v1/chat/completions") return send(404, { error: { message: "Not found" } });
 
   let raw = "";

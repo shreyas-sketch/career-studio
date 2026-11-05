@@ -58,6 +58,13 @@ export function appEnv(): Record<string, string> {
     DOSSIER_USAGE_PING_TEST_URL: `http://localhost:${FAKE_JOBS_PORT}/ping`,
     // Jev is the fake job sources' too, once a spec chooses it in Settings → Scoring (#274).
     DOSSIER_TYPESAFE_TEST_BASE_URL: `http://localhost:${FAKE_JOBS_PORT}/typesafe`,
+    // The public FDE review (e2e/public-fde.spec.ts): invented profiles instead
+    // of LinkedIn, and its model is the fake AI server speaking Anthropic's API.
+    // Nothing here can reach a paid service.
+    FDE_FIXTURE_MODE: "1",
+    ANTHROPIC_API_KEY: "sk-ant-e2e-fake-key-000000000000",
+    PUBLIC_FDE_ANTHROPIC_TEST_BASE_URL: `http://localhost:${FAKE_AI_PORT}`,
+    CAREER_STUDIO_ALLOW_PRIVATE_AI_URLS: "1",
     PORT: String(APP_PORT),
   };
 }

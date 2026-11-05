@@ -11,14 +11,17 @@ export default async function PublicFdeLanding({ searchParams }: { searchParams:
   const deleted = (await searchParams).deleted === "1";
   const [intake, market] = await Promise.all([intakeState().catch(() => ({ open: false, reason: "disabled" as const })), marketSummary().catch(() => null)]);
   return (
-    <div className="mx-auto grid w-full max-w-[1240px] grid-cols-[minmax(0,1fr)] gap-12 px-8 pt-16 pb-20 max-sm:px-4 max-sm:pt-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16 lg:pt-24">
-      <div className="flex flex-col gap-8">
+    <div className="mx-auto grid w-full max-w-[1240px] grid-cols-[minmax(0,1fr)] gap-10 px-8 pt-16 pb-20 max-sm:px-4 max-sm:pt-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-x-16 lg:gap-y-8 lg:pt-24">
+      {/* On a phone: the question, then the form, then the details; side by side from lg up. */}
+      <div className="flex flex-col gap-6 lg:col-start-1 lg:row-start-1">
         <h1 className="max-w-[16ch] font-serif text-[56px] leading-[1.02] font-medium tracking-[-0.025em] text-balance max-md:text-[44px] max-sm:text-[36px]">
           How does your profile read to teams hiring forward deployed engineers?
         </h1>
         <p className="max-w-[56ch] text-lead text-pretty text-muted">
           Paste your LinkedIn URL. We find current FDE openings across employers, compare each one with what your public profile shows, and tell you where you stand, what&apos;s missing and what these roles advertise in pay.
         </p>
+      </div>
+      <div className="flex flex-col gap-8 lg:col-start-1 lg:row-start-2">
         <dl className="grid max-w-[640px] grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-5 sm:grid-cols-3">
           <div className="flex flex-col gap-1 border-t-2 border-ink pt-3">
             <dt className="font-medium">Real openings</dt>
@@ -39,7 +42,7 @@ export default async function PublicFdeLanding({ searchParams }: { searchParams:
           </p>
         )}
       </div>
-      <div className="flex flex-col gap-4 lg:pt-3">
+      <div className="flex flex-col gap-4 max-lg:row-start-2 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:pt-3">
         {deleted && <p role="status" className="rounded-card border border-line-card bg-card px-4 py-3 text-sm">Your report and its copy of your profile were deleted.</p>}
         <StartForm initialIntake={intake} />
         <DataNotice retentionHours={publicFdeConfig().retentionHours} />

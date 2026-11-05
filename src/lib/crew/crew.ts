@@ -58,6 +58,9 @@ const JOB_ROLES: Record<string, JobRole> = {
   "upwork-analyze": { crew: "appraiser", did: "Appraised an Upwork job", handsOver: true },
   "upwork-proposal": { crew: "appraiser", did: "Wrote a proposal", handsOver: true },
   "skill-plan": { crew: "coach", did: "Wrote a skill plan", handsOver: true },
+  "fde-review": { crew: "scout", did: "Compared a profile with current FDE roles", handsOver: true },
+  "fde-freelance": { crew: "prospector", did: "Found paid work for a reviewed profile", handsOver: true },
+  "fde-pilot": { crew: "scout", did: "Ran a batch of FDE reviews", handsOver: true },
 };
 
 export const jobRole = (type: string): JobRole | undefined => JOB_ROLES[type];
@@ -66,7 +69,7 @@ const within = (pathname: string, base: string) => pathname === base || pathname
 
 /** Whose screen a path is; undefined for the user's own (Today, Profile, Settings). */
 export function crewOfPath(pathname: string): CrewId | undefined {
-  if (["/jobs", "/startups", "/agent"].some((base) => within(pathname, base))) return "scout";
+  if (["/jobs", "/startups", "/agent", "/fde"].some((base) => within(pathname, base))) return "scout";
   if (["/resumes", "/resume", "/applications", "/new", "/inbox"].some((base) => within(pathname, base))) return "tailor";
   if (within(pathname, "/interviews")) return "interviewer";
   if (within(pathname, "/loops")) return "usher";

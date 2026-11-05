@@ -11,6 +11,8 @@ import { backupsDir } from "@/lib/backups";
 import { mcpUrl } from "@/lib/connector/oauth";
 import { exportFileName } from "@/lib/data-export";
 import { formatShortDate } from "@/lib/dates";
+import { fdeConfig, retrievalProvider, USD } from "@/lib/fde/config";
+import { spentToday } from "@/lib/fde/spend";
 import { env } from "@/lib/env";
 import { googleConnection } from "@/lib/google/account";
 import { loadGoogleClientConfig, redirectUri } from "@/lib/google/oauth";
@@ -28,6 +30,7 @@ import { AgentSection } from "./agent-section";
 import { AiBehaviour } from "./ai-behaviour";
 import { AiProviderSection } from "./ai-provider-section";
 import { DataSection } from "./data-section";
+import { FdeSection, type FdeSettingsView } from "./fde-section";
 import { DocumentsSection } from "./documents-section";
 import { GoogleSection } from "./google-section";
 import { GoogleNotice } from "./google-notice";
@@ -37,6 +40,24 @@ import { AboutSection, type AboutFacts, type UsagePingView } from "./about-secti
 import { ConnectorSection } from "./connector-section";
 import { settingsSectionFromParam } from "./sections";
 import { SettingsScreen } from "./settings-screen";
+
+async function fdeSettingsView(): Promise<FdeSettingsView> {
+  const config = fdeConfig();
+  const provider = retrievalProvider();
+  const dollars = (micro: number) => `$${(micro / USD).toFixed(micro < USD ? 4 : 2)}`;
+  return {
+    provider: provider.label,
+    isFixture: provider.isFixture,
+    tokenSet: provider.isConfigured(),
+    runLimit: dollars(config.runSpendLimitMicro),
+    dailyLimit: dollars(config.dailySpendLimitMicro),
+    spentToday: dollars(await spentToday()),
+    accountDailyReports: config.accountDailyReports,
+    shortlistSize: config.shortlistSize,
+    benchmarkHours: config.benchmarkMaxAgeHours,
+    retentionDays: config.retentionDays,
+  };
+}
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -98,6 +119,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
             }}
           />
         </>
+      ) : section === "fde" ? (
+        <FdeSection view={await fdeSettingsView()} />
       ) : section === "connector" ? (
         <ConnectorSection
           initial={{ on: settings.connectorEnabledAt !== null, redirects: settings.connectorRedirects }}

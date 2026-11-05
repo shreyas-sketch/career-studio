@@ -54,6 +54,11 @@ export const ACCOUNTS_DDL = [
     payload JSONB NOT NULL,
     fetched_at TIMESTAMPTZ NOT NULL
   )`,
+  // What FDE Review spent on paid retrieval each day, across every account, for the server-wide limit.
+  `CREATE TABLE IF NOT EXISTS cs_shared.fde_spend (
+    day DATE PRIMARY KEY,
+    cost_micro BIGINT NOT NULL DEFAULT 0
+  )`,
 ];
 
 /** Creates the shared schema once per process. */

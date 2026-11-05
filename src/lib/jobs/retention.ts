@@ -5,6 +5,8 @@ import { logServerError } from "@/lib/log";
 import { prisma } from "@/lib/prisma";
 import { loadSettings } from "@/lib/settings-data";
 
+import { sweepFdeData } from "@/lib/fde/retention";
+
 import { removeOldZips } from "./zip-pdfs";
 import { forEachUser } from "@/lib/tenancy/each-user";
 
@@ -31,6 +33,7 @@ export async function sweepFinishedJobs(now = new Date(), hours?: number): Promi
   });
   await removeOldZips(now.getTime());
   await prisma.claudePaste.deleteMany({ where: { expiresAt: { lte: now } } });
+  await sweepFdeData(now);
   return count;
 }
 

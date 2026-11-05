@@ -286,6 +286,12 @@ export const deleteEverything = action(z.object({ confirm: z.literal("DELETE") }
 
   await prisma.$transaction(async (tx) => {
     await tx.job.deleteMany();
+    // FDE reviews, with every snapshot of other people's profiles.
+    await tx.fdeReport.deleteMany();
+    await tx.fdeProfileSnapshot.deleteMany();
+    await tx.fdeBenchmark.deleteMany();
+    await tx.fdeUsage.deleteMany();
+    await tx.fdePilot.deleteMany();
     // Find jobs' postings and past searches (E14-9, E14-10).
     await tx.posting.deleteMany();
     await tx.postingSearch.deleteMany();

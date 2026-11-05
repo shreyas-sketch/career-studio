@@ -7,6 +7,7 @@ export const SETTINGS_SECTIONS = [
   { id: "documents", label: "Documents" },
   { id: "google", label: "Google" },
   { id: "connector", label: "MCP connector" },
+  { id: "fde", label: "FDE review" },
   { id: "data", label: "Your data" },
   { id: "about", label: "About" },
 ] as const;

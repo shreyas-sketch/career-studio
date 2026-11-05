@@ -33,6 +33,25 @@ let emails = 0;
 /** The last request's messages, for specs that check what a prompt carried (GET /last). */
 let last: Message[] = [];
 
+const FDE_PATTERNS: [RegExp, string, string, string | null][] = [
+  [/python/i, "python", "engineering", null],
+  [/\bgo\b|golang|\brust\b/i, "other_languages", "engineering", null],
+  [/typescript|javascript/i, "typescript_javascript", "engineering", null],
+  [/\bcustomers?\b/i, "customer_facing", "customer", null],
+  [/\bproduction\b/i, "production_ownership", "deployment_infra", null],
+  [/\bllms?\b|large language|generative/i, "llm_applications", "ai_ml", null],
+  [/\bevals?\b|evaluation/i, "evals", "ai_ml", null],
+  [/\baws\b|\bgcp\b|\bazure\b|cloud/i, "cloud_infra", "deployment_infra", null],
+  [/kubernetes|docker/i, "containers_kubernetes", "deployment_infra", null],
+  [/\bsql\b|data pipeline/i, "data_sql", "engineering", null],
+  [/\bapis?\b|integrat/i, "apis_integrations", "engineering", null],
+  [/\d+\+?\s*years/i, "years_experience", "eligibility", "years"],
+  [/travel/i, "travel", "eligibility", "travel"],
+  [/clearance/i, "clearance", "eligibility", "clearance"],
+  [/work authori[sz]ation|right to work|visa/i, "work_authorization", "eligibility", "work_authorization"],
+];
+const fdeLabel = (key: string) => key.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase());
+
 const answers: Record<string, (messages: Message[]) => unknown> = {
   extracted_posting: () => ({
     title: "Senior Product Designer, Payments · Ledgerly",
@@ -276,6 +295,43 @@ const answers: Record<string, (messages: Message[]) => unknown> = {
     },
   }),
   opportunity_fit: () => ({ score: 74, verdict: "consider", reasons: ["Matches your Webflow experience"], gaps: ["Asks for Shopify"], concerns: ["Pay not stated"] }),
+  // FDE Review: reads the real text it's given, so that its quotes pass the app's checks.
+  fde_requirements: (messages) => {
+    const text = /<posting>\n([\s\S]*)\n<\/posting>/.exec(messages.at(-1)?.content ?? "")?.[1] ?? "";
+    const sentences = text.split(/(?<=[.!?])\s+|\n+/).map((line) => line.trim()).filter((line) => line.length >= 12 && line.length <= 260);
+    const requirements = FDE_PATTERNS.flatMap(([pattern, key, category, eligibility]) => {
+      const excerpt = sentences.find((line) => pattern.test(line));
+      return excerpt ? [{ text: fdeLabel(key), excerpt, level: /nice to have|preferred|bonus|a plus/i.test(excerpt) ? "preferred" : "must", category, key, eligibility }] : [];
+    });
+    return { isCustomerFacingEngineering: requirements.length > 0, requirements };
+  },
+  fde_evidence: (messages) => {
+    const content = messages.at(-1)?.content ?? "";
+    const requirements = JSON.parse(/Requirements \(from this role only\):\n([\s\S]*?)\n\nThe profile's sources:/.exec(content)?.[1] ?? "[]") as { id: string; text: string; excerpt: string }[];
+    const sources = JSON.parse(/The profile's sources:\n([\s\S]*)$/.exec(content)?.[1] ?? "[]") as { id: string; text: string }[];
+    return {
+      assessments: requirements.map(({ id, text, excerpt }) => {
+        // By the requirement's own kind, so that a report shows a mix of findings. Cloud reads as partial.
+        const kind = FDE_PATTERNS.find(([, key]) => fdeLabel(key) === text) ?? FDE_PATTERNS.find(([pattern]) => pattern.test(excerpt));
+        const line = kind && sources.flatMap((source) => source.text.split(/\n+/).filter((entry) => entry.length >= 12 && entry.length <= 200 && kind[0].test(entry)).map((quote) => ({ sourceId: source.id, quote })))[0];
+        if (!line) return { requirementId: id, status: "not_shown", evidence: [], note: "Nothing in this profile shows this. That doesn't mean they can't do it.", action: `Describe any real work on ${text.toLowerCase()} in the profile.` };
+        return kind[1] === "cloud_infra"
+          ? { requirementId: id, status: "partial", evidence: [line], note: "The quoted words touch on this, without showing its depth.", action: "Say which services were run, and at what scale." }
+          : { requirementId: id, status: "demonstrated", evidence: [line], note: "The quoted words show this.", action: "" };
+      }),
+    };
+  },
+  fde_insights: (messages) => {
+    const content = messages.at(-1)?.content ?? "";
+    const sources = JSON.parse(/The profile's sources:\n([\s\S]*)$/.exec(content)?.[1] ?? "[]") as { label: string; text: string }[];
+    const headline = sources.find((source) => source.label === "Headline")?.text ?? "";
+    return {
+      summary: "This stand-in text comes from the test model, not a real analysis.",
+      rewrites: headline ? [{ target: "Headline", original: headline, suggested: `${headline}, deploying software with customers across [number] sites`, why: "Most sampled roles ask for customer-facing delivery." }] : [],
+      questions: ["How many customer sites did this work cover?"],
+      portfolio: [{ title: "A small evaluated LLM deployment", brief: "Build one and write up how it was evaluated.", proves: ["Evaluation of AI systems"] }],
+    };
+  },
   resume_coaching: (messages) => {
     const ids = [...(messages.at(-1)?.content ?? "").matchAll(/"id": "([^"]+)"/g)].map((match) => match[1]);
     const unit = ids.find((id) => id?.startsWith("experience:")) ?? ids[0] ?? "summary";

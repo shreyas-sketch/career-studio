@@ -11,6 +11,7 @@ import {
   Rocket,
   Search,
   Settings,
+  Radar,
   Sprout,
   UserRound,
   type LucideIcon,
@@ -77,7 +78,10 @@ export const NAV: { label?: string; items: NavItem[] }[] = [
   },
   {
     label: "Grow",
-    items: [{ href: "/skills", label: "Skill plans", icon: Sprout }],
+    items: [
+      { href: "/skills", label: "Skill plans", icon: Sprout },
+      { href: "/fde", label: "FDE review", icon: Radar },
+    ],
   },
   { items: [{ href: "/settings", label: "Settings", icon: Settings }] },
 ];

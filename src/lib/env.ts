@@ -154,6 +154,23 @@ const schema = z.object({
   DOSSIER_PUBLIC_URL: optional(
     z.url({ protocol: /^https?$/, error: "DOSSIER_PUBLIC_URL must be an http:// or https:// URL." }).transform((url) => url.replace(/\/+$/, "")),
   ),
+  // FDE Review (docs/FDE_REVIEW.md). The token only ever goes from this server
+  // to Treg. Nothing here reaches a browser.
+  TREG_API_TOKEN: optional(z.string().min(8, { error: "TREG_API_TOKEN looks too short to be a Treg token." })),
+  FDE_RUN_SPEND_LIMIT_USD: optional(z.coerce.number().positive({ error: "FDE_RUN_SPEND_LIMIT_USD must be a positive amount in dollars." })),
+  FDE_DAILY_SPEND_LIMIT_USD: optional(z.coerce.number().positive({ error: "FDE_DAILY_SPEND_LIMIT_USD must be a positive amount in dollars." })),
+  FDE_ACCOUNT_DAILY_REPORTS: optional(z.coerce.number().int().positive({ error: "FDE_ACCOUNT_DAILY_REPORTS must be a whole number." })),
+  FDE_SHORTLIST_SIZE: optional(z.coerce.number().int().min(8).max(12, { error: "FDE_SHORTLIST_SIZE must be from 8 to 12." })),
+  FDE_BENCHMARK_MAX_AGE_HOURS: optional(z.coerce.number().positive({ error: "FDE_BENCHMARK_MAX_AGE_HOURS must be a positive number." })),
+  FDE_PROFILE_MAX_AGE_DAYS: optional(z.coerce.number().positive({ error: "FDE_PROFILE_MAX_AGE_DAYS must be a positive number." })),
+  FDE_RETENTION_DAYS: optional(z.coerce.number().positive({ error: "FDE_RETENTION_DAYS must be a positive number." })),
+  FDE_LINKEDIN_DETAIL_LIMIT: optional(z.coerce.number().int().min(0).max(30, { error: "FDE_LINKEDIN_DETAIL_LIMIT must be from 0 to 30." })),
+  // What a million tokens costs on your model, to estimate model spend. Without it, only tokens are shown.
+  FDE_MODEL_USD_PER_MILLION_TOKENS: optional(z.coerce.number().positive({ error: "FDE_MODEL_USD_PER_MILLION_TOKENS must be a positive amount." })),
+  // Labelled sample data instead of a live LinkedIn read, for demos and tests. It's never presented as live.
+  FDE_FIXTURE_MODE: optional(z.enum(["0", "1"], { error: "FDE_FIXTURE_MODE must be 0 or 1." })),
+  // For the end-to-end tests only: sends Treg's requests to <url> instead.
+  TREG_TEST_BASE_URL: optional(z.url({ protocol: /^https?$/, error: "TREG_TEST_BASE_URL must be an http:// or https:// URL." })),
   // For the end-to-end tests only: sends every job source's requests to
   // <url>/<source> instead, where a fake source answers (e2e/fake-jobs.mts).
   DOSSIER_JOBS_TEST_BASE_URL: optional(

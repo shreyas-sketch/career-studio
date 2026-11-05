@@ -1241,3 +1241,125 @@ model SkillPlan {
 
   @@index([status, updatedAt])
 }
+
+/// FDE Review (docs/FDE_REVIEW.md): one read of another person's public profile.
+/// Kept apart from the account owner's own profile, and never written to it.
+model FdeProfileSnapshot {
+  id                String    @id @default(cuid())
+  ownerUserId       String
+  subjectProfileId  String?
+  subjectProfileUrl String
+  /// The profile address's slug, for finding an earlier read of the same person.
+  subjectKey        String
+  provider          String
+  /// normalizedProfileSchema. Only fields on its list: never email addresses.
+  data              Json
+  quality           String
+  costMicro         Int       @default(0)
+  retrievedAt       DateTime  @default(now())
+  reports           FdeReport[]
+
+  @@index([subjectKey, retrievedAt])
+}
+
+/// A versioned sample of current openings: reports keep pointing at the version they used.
+model FdeBenchmark {
+  id           String      @id @default(cuid())
+  /// The filters that made it; only the same scope can reuse it.
+  scopeKey     String
+  version      Int
+  filters      Json
+  /// roleSchema[], with each posting's full text and requirements.
+  roles        Json
+  coverage     Json
+  rubricVersion String
+  discoveredAt DateTime    @default(now())
+  expiresAt    DateTime
+  reports      FdeReport[]
+
+  @@unique([scopeKey, version])
+  @@index([scopeKey, expiresAt])
+}
+
+/// A review of one person's public profile, private to the account that asked for it.
+model FdeReport {
+  id                String              @id @default(cuid())
+  ownerUserId       String
+  subjectProfileId  String?
+  subjectProfileUrl String
+  subjectKey        String
+  subjectName       String              @default("")
+  /// running, complete, partial, restricted, failed or quota.
+  state             String              @default("running")
+  filters           Json
+  scopeKey          String
+  /// stagesSchema: real steps with real times.
+  stages            Json
+  /// first_fetch, cached or refreshed.
+  profileOrigin     String?
+  /// discovered, cached or refreshed.
+  benchmarkOrigin   String?
+  snapshotId        String?
+  snapshot          FdeProfileSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  benchmarkId       String?
+  benchmark         FdeBenchmark?       @relation(fields: [benchmarkId], references: [id], onDelete: SetNull)
+  rubricVersion     String              @default("")
+  /// Roles found so far, then scores, comparison and insights.
+  result            Json?
+  /// freelanceResultSchema, written by its own job.
+  freelance         Json?
+  /// Ids of learning steps ticked off. Never read by any score.
+  learningProgress  Json
+  errorCode         String?
+  errorMessage      String?
+  /// The report this one refreshes; that one stays as it was.
+  refreshOf         String?
+  pilotId           String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  usage             FdeUsage[]
+
+  @@index([subjectKey, scopeKey, createdAt])
+  @@index([createdAt])
+  @@index([pilotId])
+}
+
+/// What each provider or model call cost, kept per kind so they can be told apart.
+model FdeUsage {
+  id        String     @id @default(cuid())
+  reportId  String?
+  report    FdeReport? @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  /// profile, discovery, job_detail or model.
+  kind      String
+  provider  String
+  tool      String
+  costMicro Int        @default(0)
+  /// True when the amount is worked out here rather than reported by the provider.
+  estimated Boolean    @default(false)
+  cached    Boolean    @default(false)
+  tokens    Int?
+  callId    String?
+  at        DateTime   @default(now())
+
+  @@index([reportId])
+  @@index([at])
+}
+
+/// A controlled batch of reviews, run a few at a time with a hard spending stop.
+model FdePilot {
+  id              String   @id @default(cuid())
+  ownerUserId     String
+  name            String   @default("")
+  /// Each address with its state: pending, running, complete, partial, inaccessible or failed.
+  items           Json
+  rejected        Json
+  filters         Json
+  /// draft, running, paused, stopped or done.
+  state           String   @default("draft")
+  stopReason      String?
+  concurrency     Int      @default(2)
+  spendLimitMicro Int
+  benchmarkId     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

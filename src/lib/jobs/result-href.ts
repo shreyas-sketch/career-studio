@@ -15,6 +15,11 @@ export function resultHref(job: FinishedJob, screen: string, loops: ReadonlyMap<
   const session = inputId(job.input, "sessionId");
   const round = inputId(job.input, "roundId");
   switch (job.type) {
+    case "fde-review":
+    case "fde-freelance":
+      return id ? `/fde/${id}` : "/fde";
+    case "fde-pilot":
+      return id ? `/fde/pilot/${id}` : "/fde/pilot";
     case "skill-plan":
       return id ? `/skills/${id}` : screen;
     case "upwork-analyze":

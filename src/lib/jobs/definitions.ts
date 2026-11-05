@@ -18,5 +18,6 @@ import "@/lib/connector/draft";
 import "@/lib/career/interviews";
 import "@/lib/career/upwork";
 import "@/lib/career/skill-plans";
+import "@/lib/fde/review";
 import "@/lib/career/freelance";
 import "@/lib/career/resume-versions";

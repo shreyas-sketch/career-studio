@@ -249,7 +249,8 @@ export function PublicReport({ initial }: { initial: PublicReportView }) {
         </nav>
 
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-10 lg:grid-cols-[360px_minmax(0,1fr)]">
-          <div id="profile" className="scroll-mt-20 lg:sticky lg:top-16">
+          {/* On a phone, results come first once there are any; while waiting, the profile is the preview. */}
+          <div id="profile" className={cn("scroll-mt-20 lg:sticky lg:top-16", hasComparison && "max-lg:order-2")}>
             {report.profile ? (
               <ProfilePanel profile={report.profile} origin={report.profileOrigin} mediaBase={report.mediaBase} />
             ) : (
@@ -261,7 +262,7 @@ export function PublicReport({ initial }: { initial: PublicReportView }) {
             )}
           </div>
 
-          <div className="flex min-w-0 flex-col gap-14">
+          <div className={cn("flex min-w-0 flex-col gap-14", hasComparison && "max-lg:order-1")}>
             {hasComparison && (
               <div id="compare" className="scroll-mt-20">
                 <Readiness

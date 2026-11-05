@@ -32,14 +32,14 @@ const LINES = {
   years: "3+ years of software engineering experience.",
 };
 
-const REQUIREMENTS: { key: keyof typeof LINES; text: string; category: string; level: "must" | "preferred"; eligibility: string | null; years: { min: number; max: null } | null }[] = [
-  { key: "python", text: "Python", category: "engineering", level: "must", eligibility: null, years: null },
-  { key: "customer", text: "Customer facing", category: "customer", level: "must", eligibility: null, years: null },
-  { key: "llm", text: "Llm applications", category: "ai_ml", level: "must", eligibility: null, years: null },
-  { key: "cloud", text: "Cloud infra", category: "deployment_infra", level: "must", eligibility: null, years: null },
-  { key: "apis", text: "Apis integrations", category: "engineering", level: "must", eligibility: null, years: null },
-  { key: "evals", text: "Evals", category: "ai_ml", level: "preferred", eligibility: null, years: null },
-  { key: "years", text: "Years experience", category: "eligibility", level: "must", eligibility: "years", years: { min: 3, max: null } },
+const REQUIREMENTS: { line: keyof typeof LINES; key: string; text: string; category: string; level: "must" | "preferred"; eligibility: string | null; years: { min: number; max: null } | null }[] = [
+  { line: "python", key: "python", text: "Python", category: "engineering", level: "must", eligibility: null, years: null },
+  { line: "customer", key: "customer_facing", text: "Customer facing", category: "customer", level: "must", eligibility: null, years: null },
+  { line: "llm", key: "llm_applications", text: "Llm applications", category: "ai_ml", level: "must", eligibility: null, years: null },
+  { line: "cloud", key: "cloud_infra", text: "Cloud infra", category: "deployment_infra", level: "must", eligibility: null, years: null },
+  { line: "apis", key: "apis_integrations", text: "Apis integrations", category: "engineering", level: "must", eligibility: null, years: null },
+  { line: "evals", key: "evals", text: "Evals", category: "ai_ml", level: "preferred", eligibility: null, years: null },
+  { line: "years", key: "years_experience", text: "Years experience", category: "eligibility", level: "must", eligibility: "years", years: { min: 3, max: null } },
 ];
 
 export function marketRoles(now = new Date()) {
@@ -84,7 +84,7 @@ export function marketRoles(now = new Date()) {
         id: `${id}:${requirement.key}`,
         roleId: id,
         text: requirement.text,
-        excerpt: LINES[requirement.key],
+        excerpt: LINES[requirement.line],
         level: requirement.level,
         category: requirement.category,
         key: requirement.key,

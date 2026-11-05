@@ -143,6 +143,8 @@ test("a private profile ends with a plain explanation, not a spinner", async ({ 
 
 test("paused intake says so on the landing page", async ({ page }) => {
   await controls({ intakePaused: true });
+  // Every process reads the controls at most a second old.
+  await page.waitForTimeout(1_500);
   await page.setViewportSize(PHONE);
   await page.goto("/fde-review");
   await expect(page.getByText("New reviews are paused for a moment")).toBeVisible();
